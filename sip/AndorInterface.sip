@@ -19,7 +19,5 @@ namespace Andor
     virtual void 	getStatus(StatusType& status /Out/);
     virtual int 	getNbHwAcquiredFrames();
 
-    void		getFrameRate(double& frame_rate /Out/);
-    void		setTimeout(int);
   };
 };

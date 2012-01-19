@@ -156,8 +156,6 @@ class Interface : public HwInterface
     virtual void    getStatus(StatusType& status);
     virtual int     getNbHwAcquiredFrames();
 
-    void            getFrameRate(double& frame_rate);
-    void            setTimeout(int TO);
  private:
     Camera&         m_cam;
     CapList         m_cap_list;

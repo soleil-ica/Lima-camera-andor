@@ -152,9 +152,7 @@ SyncCtrlObj::~SyncCtrlObj()
 //
 //-----------------------------------------------------
 bool SyncCtrlObj::checkTrigMode(TrigMode trig_mode)
-{
-    bool valid_mode = false;
-    
+{   
     return m_cam.checkTrigMode(trig_mode);   
  }
 
@@ -330,7 +328,7 @@ Interface::Interface(Camera& cam)
     HwRoiCtrlObj *roi = &m_roi;
     m_cap_list.push_back(HwCap(roi));
 
-	if(m_cam.isBinnigAvailable())
+	if(m_cam.isBinningAvailable())
 	{
 		HwBinCtrlObj *bin = &m_bin;
 		m_cap_list.push_back(HwCap(bin));
@@ -400,7 +398,9 @@ void Interface::stopAcq()
 //-----------------------------------------------------
 void Interface::getStatus(StatusType& status)
 {
-		Camera::Status andor_status = Camera::Ready;
+    DEB_MEMBER_FUNCT();
+
+	Camera::Status andor_status = Camera::Ready;
     m_cam.getStatus(andor_status);
     switch (andor_status)
     {
@@ -425,6 +425,8 @@ void Interface::getStatus(StatusType& status)
           status.acq = AcqFault;
     }
     status.det_mask = DetExposure | DetReadout | DetLatency;
+    
+    DEB_RETURN() << DEB_VAR1(status);
 }
 
 //-----------------------------------------------------
@@ -438,22 +440,9 @@ int Interface::getNbHwAcquiredFrames()
     return acq_frames;
 }
 
-//-----------------------------------------------------
-//
-//-----------------------------------------------------
-void Interface::getFrameRate(double& frame_rate)
-{
-    DEB_MEMBER_FUNCT();
-    m_cam.getFrameRate(frame_rate);
-}
+
 
 //-----------------------------------------------------
-//
-//-----------------------------------------------------
-void Interface::setTimeout(int TO)
-{
-    m_cam.setTimeout(TO);
-}
 //-----------------------------------------------------
 //
 //-----------------------------------------------------

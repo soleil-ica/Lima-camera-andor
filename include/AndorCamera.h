@@ -34,6 +34,8 @@
 #include "HwMaxImageSizeCallback.h"
 #include "HwBufferMgr.h"
 
+#include <ostream>
+
 using namespace std;
 
 
@@ -97,19 +99,23 @@ class Camera
     void checkBin(Bin&);
     void setBin(const Bin&);
     void getBin(Bin&);
+    bool isBinningAvailable();
     
     void getPixelSize(double&);
     
     void getStatus(Camera::Status& status);
+    
+    void reset();
 
     // -- andor specific, LIMA don't worry about it !        
-    bool andorError(AndorErrorCode code);
-    void initialiseController(void);
-    void initAdcSpeed(void);
+    void _mapAndorError();
+    bool andorError(unsigned int code);
+    void initialiseController();
+    void initAdcSpeed();
     void setAdcSpeed(int adc);
-    void InitVSS(void);
+    void initVSS();
     void setVSS(int vss);
-    void initPGain(void);
+    void initPGain();
     void setPGain(int gain);
     void setFastExtTrigger(bool flag);
     void getFastExtTrigger(bool& flag);
@@ -123,7 +129,7 @@ class Camera
     void getTemperature(int& temp);
     void setCooler(bool flag);
     void getCooler(bool& flag);
-    void getCoolingStatus(string& status);    
+    void getCoolingStatus(std::string& status);    
     
     
     
@@ -134,11 +140,11 @@ class Camera
     void _setStatus(Camera::Status status,bool force);
 
     //- acquisition thread stuff    
-    _AcqThread*                   m_acq_thread;
-    Cond                          m_cond;
+    _AcqThread*                 m_acq_thread;
+    Cond                        m_cond;
 
     //- lima stuff
-    SoftBufferCtrlMgr		m_buffer_ctrl_mgr;
+    SoftBufferCtrlMgr		    m_buffer_ctrl_mgr;
     int                         m_nb_frames;    
     Camera::Status              m_status;
     volatile bool               m_wait_flag;
@@ -160,9 +166,10 @@ class Camera
     string                      m_config_path;
     int                         m_camera_number;
     at_32                       m_camera_handle;
-    AndorErrorCode              m_camera_error;
     AndorCapabilities           m_camera_capabilities;
-
+    string                      m_camera_error_str;
+    int                         m_camera_error;
+    
     struct Adc 
     {
 	    int		adc;
@@ -194,184 +201,11 @@ class Camera
     int                         m_acq_mode;    
     map<TrigMode, int>          m_trig_mode_maps;
     float                       m_exp_time;
+    float                       m_exp_time_max;
     float                       m_kin_time;
-    long                        m_ring_buffer_size;
-    
-
-    
-        
-    char *AndorCcdTypes[]= {
-        "PDA", 
-	    "IXON",
-    	"ICCD",
-    	"EMCCD",
-    	"CCD",
-    	"ISTAR",
-    	"VIDEO",
-    	"IDUS",
-    	"NEWTON",
-    	"SURCAM",
-    	"USBICCD",
-    	"LUCA",
-    	"RESERVED",
-    	"IKON",
-    	"INGAAS",
-    	"IVAC",
-    	"UNPROGRAMMED",
-    	"CLARA",
-        "USBISTAR"
-    };
-    
-    enum AndorErrorCode {        
-        _DRV_ERROR_CODES = 20001,
-        _DRV_SUCCESS = 20002
-        _DRV_VXDNOTINSTALLED = 20003
-        _DRV_ERROR_SCAN = 20004
-        _DRV_ERROR_CHECK_SUM = 20005
-        _DRV_ERROR_FILELOAD = 20006
-        _DRV_UNKNOWN_FUNCTION = 20007
-        _DRV_ERROR_VXD_INIT = 20008
-        _DRV_ERROR_ADDRESS = 20009
-        _DRV_ERROR_PAGELOCK = 20010
-        _DRV_ERROR_PAGEUNLOCK = 20011
-        _DRV_ERROR_BOARDTEST = 20012
-        _DRV_ERROR_ACK = 20013
-        _DRV_ERROR_UP_FIFO = 20014
-        _DRV_ERROR_PATTERN = 20015
-
-        _DRV_ACQUISITION_ERRORS = 20017
-        _DRV_ACQ_BUFFER = 20018
-        _DRV_ACQ_DOWNFIFO_FULL = 20019
-        _DRV_PROC_UNKONWN_INSTRUCTION = 20020
-        _DRV_ILLEGAL_OP_CODE = 20021
-        _DRV_KINETIC_TIME_NOT_MET = 20022
-        _DRV_ACCUM_TIME_NOT_MET = 20023
-        _DRV_NO_NEW_DATA = 20024
-        _KERN_MEM_ERROR = 20025
-        _DRV_SPOOLERROR = 20026
-        _DRV_SPOOLSETUPERROR = 20027
-        _DRV_FILESIZELIMITERROR = 20028
-        _DRV_ERROR_FILESAVE = 20029
-
-        _DRV_TEMPERATURE_CODES = 20033
-        _DRV_TEMPERATURE_OFF = 20034
-        _DRV_TEMPERATURE_NOT_STABILIZED = 20035
-        _DRV_TEMPERATURE_STABILIZED = 20036
-        _DRV_TEMPERATURE_NOT_REACHED = 20037
-        _DRV_TEMPERATURE_OUT_RANGE = 20038
-        _DRV_TEMPERATURE_NOT_SUPPORTED = 20039
-        _DRV_TEMPERATURE_DRIFT = 20040
-
-        _DRV_TEMP_CODES = 20033
-        _DRV_TEMP_OFF = 20034
-        _DRV_TEMP_NOT_STABILIZED = 20035
-        _DRV_TEMP_STABILIZED = 20036
-        _DRV_TEMP_NOT_REACHED = 20037
-        _DRV_TEMP_OUT_RANGE = 20038
-        _DRV_TEMP_NOT_SUPPORTED = 20039
-        _DRV_TEMP_DRIFT = 20040
-
-        _DRV_GENERAL_ERRORS = 20049
-        _DRV_INVALID_AUX = 20050
-        _DRV_COF_NOTLOADED = 20051
-        _DRV_FPGAPROG = 20052
-        _DRV_FLEXERROR = 20053
-        _DRV_GPIBERROR = 20054
-        _DRV_EEPROMVERSIONERROR = 20055
-
-        _DRV_DATATYPE = 20064
-        _DRV_DRIVER_ERRORS = 20065
-        _DRV_P1INVALID = 20066
-        _DRV_P2INVALID = 20067
-        _DRV_P3INVALID = 20068
-        _DRV_P4INVALID = 20069
-        _DRV_INIERROR = 20070
-        _DRV_COFERROR = 20071
-        _DRV_ACQUIRING = 20072
-        _DRV_IDLE = 20073
-        _DRV_TEMPCYCLE = 20074
-        _DRV_NOT_INITIALIZED = 20075
-        _DRV_P5INVALID = 20076
-        _DRV_P6INVALID = 20077
-        _DRV_INVALID_MODE = 20078
-        _DRV_INVALID_FILTER = 20079
-
-        _DRV_I2CERRORS = 20080
-        _DRV_I2CDEVNOTFOUND = 20081
-        _DRV_I2CTIMEOUT = 20082
-        _DRV_P7INVALID = 20083
-        _DRV_P8INVALID = 20084
-        _DRV_P9INVALID = 20085
-        _DRV_P10INVALID = 20086
-        _DRV_P11INVALID = 20087
-
-        _DRV_USBERROR = 20089
-        _DRV_IOCERROR = 20090
-        _DRV_VRMVERSIONERROR = 20091
-        _DRV_GATESTEPERROR = 20092
-        _DRV_USB_INTERRUPT_ENDPOINT_ERROR = 20093
-        _DRV_RANDOM_TRACK_ERROR = 20094
-        _DRV_INVALID_TRIGGER_MODE = 20095
-        _DRV_LOAD_FIRMWARE_ERROR = 20096
-        _DRV_DIVIDE_BY_ZERO_ERROR = 20097
-        _DRV_INVALID_RINGEXPOSURES = 20098
-        _DRV_BINNING_ERROR = 20099
-        _DRV_INVALID_AMPLIFIER = 20100
-        _DRV_INVALID_COUNTCONVERT_MODE = 20101
-
-        _DRV_ERROR_NOCAMERA = 20990
-        _DRV_NOT_SUPPORTED = 20991
-        _DRV_NOT_AVAILABLE = 20992
-
-        _DRV_ERROR_MAP = 20115
-        _DRV_ERROR_UNMAP = 20116
-        _DRV_ERROR_MDL = 20117
-        _DRV_ERROR_UNMDL = 20118
-        _DRV_ERROR_BUFFSIZE = 20119
-        _DRV_ERROR_NOHANDLE = 20121
-
-        _DRV_GATING_NOT_AVAILABLE = 20130
-        _DRV_FPGA_VOLTAGE_ERROR = 20131
-
-        _DRV_OW_CMD_FAIL = 20150
-        _DRV_OWMEMORY_BAD_ADDR = 20151
-        _DRV_OWCMD_NOT_AVAILABLE = 20152
-        _DRV_OW_NO_SLAVES = 20153
-        _DRV_OW_NOT_INITIALIZED = 20154
-        _DRV_OW_ERROR_SLAVE_NUM = 20155
-        _DRV_MSTIMINGS_ERROR = 20156
-
-        _DRV_OA_NULL_ERROR = 20173
-        _DRV_OA_PARSE_DTD_ERROR = 20174
-        _DRV_OA_DTD_VALIDATE_ERROR = 20175
-        _DRV_OA_FILE_ACCESS_ERROR = 20176
-        _DRV_OA_FILE_DOES_NOT_EXIST = 20177
-        _DRV_OA_XML_INVALID_OR_NOT_FOUND_ERROR = 20178
-        _DRV_OA_PRESET_FILE_NOT_LOADED = 20179
-        _DRV_OA_USER_FILE_NOT_LOADED = 20180
-        _DRV_OA_PRESET_AND_USER_FILE_NOT_LOADED = 20181
-        _DRV_OA_INVALID_FILE = 20182
-        _DRV_OA_FILE_HAS_BEEN_MODIFIED = 20183
-        _DRV_OA_BUFFER_FULL = 20184
-        _DRV_OA_INVALID_STRING_LENGTH = 20185
-        _DRV_OA_INVALID_CHARS_IN_NAME = 20186
-        _DRV_OA_INVALID_NAMING = 20187
-        _DRV_OA_GET_CAMERA_ERROR = 20188
-        _DRV_OA_MODE_ALREADY_EXISTS = 20189
-        _DRV_OA_STRINGS_NOT_EQUAL = 20190
-        _DRV_OA_NO_USER_DATA = 20191
-        _DRV_OA_VALUE_NOT_SUPPORTED = 20192
-        _DRV_OA_MODE_DOES_NOT_EXIST = 20193
-        _DRV_OA_CAMERA_NOT_SUPPORTED = 20194
-        _DRV_OA_FAILED_TO_GET_MODE = 20195
-    
-    };
-    
-
-    
-LIMACORE_API std::ostream& operator <<(std::ostream& os, AndorErrorCode andor_error_code);
-    
-
+    int                         m_ring_buffer_size;                
+    map<int, string>            m_andor_type_maps;            
+    map<int, string>            m_andor_error_maps;
 };
 } // namespace Andor
 } // namespace lima
