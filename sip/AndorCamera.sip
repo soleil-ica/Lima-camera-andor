@@ -13,6 +13,11 @@ namespace Andor
       Ready, Exposure, Readout, Latency, Fault
     };
 
+    enum ShutterMode{
+      FRAME,
+      MANUAL
+    };
+
     Camera(const std::string& config_path,int camera_number=0);
     ~Camera();
 
@@ -50,6 +55,15 @@ namespace Andor
     void setBin(const Bin&);
     void getBin(Bin& /Out/);
 
+    void setShutterOpenTime(double tm);
+    void getShutterOpenTime(double& tm /Out/);
+    void setShutterCloseTime(double tm);
+    void getShutterCloseTime(double& tm /Out/);
+    void setShutter(bool flag);
+    void getShutter(bool& flag /Out/);
+    void setShutterMode(ShutterMode mode);
+    void getShutterMode(ShutterMode& mode /Out/);
+
     void getPixelSize(double& /Out/);
 
     void getStatus(Andor::Camera::Status& status /Out/);
@@ -65,10 +79,6 @@ namespace Andor
     void getFastExtTrigger(bool& flag /Out/);
     void setShutterLevel(int level);
     void getShutterLevel(int& level /Out/);
-    void setShutterOpenTime(int tm);
-    void geShutterOpenTime(int& tm /Out/);
-    void setShutterCloseTime(int tm);
-    void geShutterCloseTime(int& tm /Out/);
     void setTemperatureSP(int temp);
     void getTemperature(int& temp /Out/);
     void setCooler(bool flag);

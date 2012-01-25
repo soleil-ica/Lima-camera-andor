@@ -40,92 +40,101 @@ using namespace std;
 class Camera::_AcqThread : public Thread
 {
     DEB_CLASS_NAMESPC(DebModCamera, "Camera", "_AcqThread");
-    public:
-        _AcqThread(Camera &aCam);
+public:
+    _AcqThread(Camera &aCam);
     virtual ~_AcqThread();
     
-    protected:
-        virtual void threadFunction();
+protected:
+    virtual void threadFunction();
     
-    private:
-        Camera&    m_cam;
+private:
+    Camera&    m_cam;
 };
 
 
 //---------------------------
-//- Ctor
+// @brief  Ctor
 //---------------------------
 Camera::Camera(const std::string& config_path,int camera_number)
-        : m_status(Ready),
-          m_wait_flag(true),
-          m_quit(false),
-          m_thread_running(true),
-          m_image_number(0),
-          m_latency_time(0.),
-          m_bin(1,1),
-          m_camera_handle(0),
-          m_adc_speed_number(0),
-          m_adc_speed_max(0),
-          m_adc(-1),
-          m_vss_best(0),
-          m_vss(-1),
-          m_gain_number(0),
-          m_gain_max(0),
-          m_gain(-1),
-          m_fasttrigger(0),
-          m_shutter_level(0),
-          m_shutter_close_time(0),
-          m_shutter_open_time(0),
-          m_shutter_mode(0),
-          m_exp_time(1.)
+    : m_status(Ready),
+      m_wait_flag(true),
+      m_quit(false),
+      m_thread_running(true),
+      m_image_number(0),
+      m_latency_time(0.),
+      m_bin(1,1),
+      m_shutter_state(false),
+      m_camera_handle(0),
+      m_adc_speed_number(0),
+      m_adc_speed_max(0),
+      m_adc(-1),
+      m_vss_best(0),
+      m_vss(-1),
+      m_gain_number(0),
+      m_gain_max(0),
+      m_gain(-1),
+      m_fasttrigger(0),
+      m_shutter_level(0),
+      m_shutter_close_time(0),
+      m_shutter_open_time(0),
+      m_exp_time(1.)
 {
     DEB_CONSTRUCTOR();
     m_config_path = config_path;
     m_camera_number = camera_number;
- 
+  
     _mapAndorError();
-    
+  
     // --- Get available cameras and select the choosen one.
-    at_32 numCameras;
+    int numCameras;
     DEB_TRACE() << "Get all attached cameras";
     if (GetAvailableCameras(&numCameras)!= DRV_SUCCESS)
     {
-        DEB_ERROR() << "No camera present!";
-        THROW_HW_ERROR(Error) << "No camera present!";
+	DEB_ERROR() << "No camera present!";
+	THROW_HW_ERROR(Error) << "No camera present!";
     }
     DEB_TRACE() << "Found "<< numCameras << " camera" << ((numCameras>1)? "s": "");
-
+    DEB_TRACE() << "Try to set current camera to number " << m_camera_number;
+    
     if (m_camera_number < numCameras && m_camera_number >=0)
     {        
-        GetCameraHandle(m_camera_number, &m_camera_handle);
-        SetCurrentCamera(m_camera_handle);
+	if(andorError(GetCameraHandle(m_camera_number, &m_camera_handle)))
+	{
+	    DEB_ERROR() << "Cannot get camera handle" << " : error code = " << m_camera_error_str;;
+	    THROW_HW_ERROR(InvalidValue) << "Cannot get camera handle";
+	}
+	if (andorError(SetCurrentCamera(m_camera_handle)))
+	{
+	    DEB_ERROR() << "Cannot set camera handle" << " : error code = " << m_camera_error_str;;
+	    THROW_HW_ERROR(InvalidValue) << "Cannot set camera handle";
+	}
     }
     else
     {
-        DEB_ERROR() << "Invalid camera number " << m_camera_number << ", there is "<< numCameras << " available";
-        THROW_HW_ERROR(InvalidValue) << "Invalid Camera number ";
+	DEB_ERROR() << "Invalid camera number " << m_camera_number << ", there is "<< numCameras << " available";
+	THROW_HW_ERROR(InvalidValue) << "Invalid Camera number ";
     }
 
 
     // --- Initialize  the library    
     if (andorError(Initialize((char *)m_config_path.c_str())))
     {
-        DEB_ERROR() << "Library initialization failed, check the config. path" << " : error code = " << m_camera_error_str;
-        THROW_HW_ERROR(Error) << "Library initialization failed, check the config. path";       
+	DEB_ERROR() << "Library initialization failed, check the config. path" << " : error code = " << m_camera_error_str;
+	THROW_HW_ERROR(Error) << "Library initialization failed, check the config. path";       
     }
     
     // --- Get camera capabilities
     m_camera_capabilities.ulSize = sizeof(AndorCapabilities);
     if (andorError(GetCapabilities(&m_camera_capabilities)))
     {
-        DEB_ERROR() << "Cannot get camera capabilities" << " : error code = " << m_camera_error_str;
-        THROW_HW_ERROR(Error) << "Cannot get camera capabilities";            
+	DEB_ERROR() << "Cannot get camera capabilities" << " : error code = " << m_camera_error_str;
+	THROW_HW_ERROR(Error) << "Cannot get camera capabilities";            
     }
     
     
     // --- maps detector type
     m_andor_type_maps[0]="PDA"; 
-	m_andor_type_maps[1]="IXON";
+    m_andor_type_maps[1]="IXON";
     m_andor_type_maps[2]="ICCD";
     m_andor_type_maps[3]="EMCCD";
     m_andor_type_maps[4]="CCD";
@@ -148,24 +157,18 @@ Camera::Camera(const std::string& config_path,int camera_number)
     char	model[AT_CONTROLLER_CARD_MODEL_LEN];
     if (andorError(GetHeadModel(model)))
     {
-        DEB_ERROR() << "Cannot get camera model: " << m_camera_error_str;
-        THROW_HW_ERROR(Error) << "Cannot get camera model";            
+	DEB_ERROR() << "Cannot get camera model: " << m_camera_error_str;
+	THROW_HW_ERROR(Error) << "Cannot get camera model";            
     }
     m_detector_model = model;
     m_detector_type = m_andor_type_maps[m_camera_capabilities.ulCameraType];
     
     DEB_TRACE() << "Andor Camera device found:\n" 
-                << "    * Type  : " << m_detector_type << "\n"
-                << "    * Model : " << m_detector_model;
+		<< "    * Type  : " << m_detector_type << "("
+		<< m_camera_capabilities.ulCameraType <<")\n"
+		<< "    * Model : " << m_detector_model;
 
 
-    // --- set default ROI because there is no way to read bck th image size
-    // --- BIN already set to 1,1 above.
-    // --- Andor sets the ROI by starting coordinates at 1 and not 0 !!!!
-    Size sizeMax;
-    getDetectorImageSize(sizeMax);
-    m_roi = Roi(0,0, sizeMax.getWidth(), sizeMax.getHeight());
-    
         
     // --- Initialise deeper parameters of the controller                
     initialiseController();            
@@ -174,32 +177,45 @@ Camera::Camera(const std::string& config_path,int camera_number)
     m_read_mode = 4;
     if (andorError(SetReadMode(m_read_mode)))
     {
-        DEB_ERROR() << "Cannot set camera read mode" << " : error code = " << m_camera_error_str;
-        THROW_HW_ERROR(Error) << "Cannot camera read mode";                
+	DEB_ERROR() << "Cannot set camera read mode" << " : error code = " << m_camera_error_str;
+	THROW_HW_ERROR(Error) << "Cannot camera read mode";                
     }
-    int xbin_max, ybin_max;
-    
+ 
+    int xbin_max, ybin_max;   
     if (andorError(GetMaximumBinning(m_read_mode, 0, &xbin_max)))
     {
-        DEB_ERROR() << "Cannot get the horizontal maximum binning" << " : error code = " << m_camera_error_str;
-        THROW_HW_ERROR(Error) << "Cannot get the horizontal maximum binning";            
+	DEB_ERROR() << "Cannot get the horizontal maximum binning" << " : error code = " << m_camera_error_str;
+	THROW_HW_ERROR(Error) << "Cannot get the horizontal maximum binning";            
     }
     if (andorError(GetMaximumBinning(m_read_mode, 1, &ybin_max)))
     {
-        DEB_ERROR() << "Cannot get the vertical maximum binning" << " : error code = " << m_camera_error_str;
-        THROW_HW_ERROR(Error) << "Cannot get the vertical maximum binning";            
+	DEB_ERROR() << "Cannot get the vertical maximum binning" << " : error code = " << m_camera_error_str;
+	THROW_HW_ERROR(Error) << "Cannot get the vertical maximum binning";            
     }
-    m_bin_max = Bin(xbin_max, ybin_max);
-    
+    m_bin_max = Bin(xbin_max, ybin_max);   
     DEB_TRACE() << "Maximum binning : " << xbin_max << " x " << ybin_max;                   
 
-    // --- Get the maximum exposure time allowed
+    // --- set default ROI because there is no way to read bck th image size
+    // --- BIN already set to 1,1 above.
+    // --- Andor sets the ROI by starting coordinates at 1 and not 0 !!!!
+    Size sizeMax;
+    getDetectorImageSize(sizeMax);
+    Roi aRoi = Roi(0,0, sizeMax.getWidth(), sizeMax.getHeight());    
+    
+    // --- setRoi applies both bin and roi
+    DEB_TRACE() << "Set the ROI to full frame: "<< aRoi;
+    setRoi(aRoi);
+    
+    
+    // --- Get the maximum exposure time allowed and set default
     if (this->andorError(GetMaximumExposure(&m_exp_time_max)))
     {
-        DEB_ERROR() << "Cannot get the maximum exposure time: " << m_camera_error_str;
-        THROW_HW_ERROR(Error) << "Cannot get the maximum exposure time";    
+	DEB_ERROR() << "Cannot get the maximum exposure time: " << m_camera_error_str;
+	THROW_HW_ERROR(Error) << "Cannot get the maximum exposure time";    
     }    
     DEB_TRACE() << "Maximum exposure time : "<< m_exp_time_max << "sec.";
+    
+    setExpTime(m_exp_time);
     
     // --- Set detector for software single image mode    
     m_trig_mode_maps[IntTrig] = 0;
@@ -208,20 +224,27 @@ Camera::Camera(const std::string& config_path,int camera_number)
     m_trig_mode_maps[IntTrigMult] = 10;  
     setTrigMode(IntTrig);
     
-    // --- And finally set the Andor specific acquistion mode.
+    // --- Set the Andor specific acquistion mode.
     // --- We set acquisition mode to kinetics which is the more useful for us
     // --- This mode allows to manage latency between images and multi-frame acquisition as well
     m_acq_mode = 3; // Andor Kinetics mode
     m_nb_frames = 1;
     if (andorError(SetAcquisitionMode(m_acq_mode)))
     {
-        DEB_ERROR() << "Cannot get the vertical maximum binning" << " : error code = " << m_camera_error_str;
-        THROW_HW_ERROR(Error) << "Cannot get the vertical maximum binning";            
+	DEB_ERROR() << "Cannot get the vertical maximum binning" << " : error code = " << m_camera_error_str;
+	THROW_HW_ERROR(Error) << "Cannot get the vertical maximum binning";            
     }               
+
+    // --- set shutter mode to FRAME
+    setShutterMode(FRAME);
+    
+    // --- finally start the acq thread
+    m_acq_thread = new _AcqThread(*this);
+    m_acq_thread->start();
 }
 
 //---------------------------
-//- Dtor
+// @brief  Dtor
 //---------------------------
 Camera::~Camera()
 {
@@ -233,13 +256,13 @@ Camera::~Camera()
     // Close camera
     if (m_cooler)
     {
-        DEB_ERROR() <<"Please stop the cooling before shuting dowm the camera\n"                             
-                    << "brutale heating could damage the sensor.\n"
-                    << "And wait until temperature rises above 5 deg, before shuting down.";
+	DEB_ERROR() <<"Please stop the cooling before shuting dowm the camera\n"                             
+		    << "brutale heating could damage the sensor.\n"
+		    << "And wait until temperature rises above 5 deg, before shuting down.";
 
-        THROW_HW_ERROR(Error)<<"Please stop the cooling before shuting dowm the camera\n"                             
-                    << "brutale heating could damage the sensor.\n"
-                    << "And wait until temperature rises above 5 deg, before shuting down.";
+	THROW_HW_ERROR(Error)<<"Please stop the cooling before shuting dowm the camera\n"                             
+			     << "brutale heating could damage the sensor.\n"
+			     << "And wait until temperature rises above 5 deg, before shuting down.";
     }
     
     DEB_TRACE() << "Shutdown camera";
@@ -248,7 +271,7 @@ Camera::~Camera()
 }
 
 //---------------------------
-//- Camera::start()
+// @brief  start the acquistion
 //---------------------------
 void Camera::startAcq()
 {
@@ -295,15 +318,15 @@ void Camera::startAcq()
 }
 
 //---------------------------
-//- Camera::stopAcq()
+// @brief stop the acquisition
 //---------------------------
 void Camera::stopAcq()
 {
-  _stopAcq(false);
+    _stopAcq(false);
 }
 
 //---------------------------
-//- Camera::_stopAcq()
+// @brief private method
 //---------------------------
 void Camera::_stopAcq(bool internalFlag)
 {
@@ -317,7 +340,7 @@ void Camera::_stopAcq(bool internalFlag)
             m_wait_flag = true;
             m_cond.wait();
         }
-            aLock.unlock();
+	aLock.unlock();
 
         //Let the acq thread stop the acquisition
         if(!internalFlag) return;
@@ -333,7 +356,7 @@ void Camera::_stopAcq(bool internalFlag)
     }
 }
 //---------------------------
-//- Camera::_AcqThread::threadFunction()
+// @brief the thread function for acquisition
 //---------------------------
 void Camera::_AcqThread::threadFunction()
 {
@@ -372,24 +395,27 @@ void Camera::_AcqThread::threadFunction()
                     THROW_HW_ERROR(Error) << "Cannot get number of new images";
                 }
             }        
-            
+            DEB_TRACE() << "Available images: first = " << first << " last = " << last;
+             
             // --- Images are available, process images
             m_cam._setStatus(Camera::Readout,false);
  
             FrameDim frame_dim = buffer_mgr.getFrameDim();
-            int size = frame_dim.getMemSize();
+            Size  frame_size = frame_dim.getSize();
+            int size = frame_size.getWidth() * frame_size.getHeight();
             int validfirst, validlast;
             
             for (long im=first; im <= last; im++)
             {
-                DEB_TRACE()  << "image#" << DEB_VAR1(m_cam.m_image_number) <<" acquired !";
+                DEB_TRACE()  << "image #" << m_cam.m_image_number <<" acquired !";
                 // ---  must get image one by one to copy to the buffer manager
                 void *ptr = buffer_mgr.getFrameBufferPtr(m_cam.m_image_number);
                 
-                if (m_cam.andorError(GetImages(im, im,(at_32 *) ptr, (unsigned long)size,&validfirst, &validlast)))
+                if (m_cam.andorError(GetImages16(im, im,(unsigned short*) ptr, (unsigned long)size,&validfirst, &validlast)))
                 {
                     m_cam._setStatus(Camera::Fault,false);
                     continueAcq = false;
+                    DEB_TRACE() << "size = " << size;
                     DEB_ERROR() << "Cannot get image #" << im << " : error code = " << m_cam.m_camera_error_str;
                     THROW_HW_ERROR(Error) << "Cannot get last image";                
                 }
@@ -409,15 +435,15 @@ void Camera::_AcqThread::threadFunction()
 }
 
 //-----------------------------------------------------
-//- Camera::_AcqThread::_AcqThread()
+// @brief the acquisition thread Ctor
 //-----------------------------------------------------
 Camera::_AcqThread::_AcqThread(Camera &aCam) :
-                    m_cam(aCam)
+    m_cam(aCam)
 {
     pthread_attr_setscope(&m_thread_attr,PTHREAD_SCOPE_PROCESS);
 }
 //-----------------------------------------------------
-//- Camera::_AcqThread::~_AcqThread()
+// @brief the acquisition thread Dtor
 //-----------------------------------------------------
 Camera::_AcqThread::~_AcqThread()
 {
@@ -430,7 +456,7 @@ Camera::_AcqThread::~_AcqThread()
 }
 
 //-----------------------------------------------------
-//- Camera::getDetectorImageSize()
+// brief return the detector image size 
 //-----------------------------------------------------
 void Camera::getDetectorImageSize(Size& size)
 {
@@ -440,15 +466,15 @@ void Camera::getDetectorImageSize(Size& size)
     // --- Get the max image size of the detector
     if (andorError(GetDetector(&xmax, &ymax)))
     {
-        DEB_ERROR() << "Cannot get detector size" << " : error code = " << m_camera_error_str;
-        THROW_HW_ERROR(Error) << "Cannot get detector size";                    
+	DEB_ERROR() << "Cannot get detector size" << " : error code = " << m_camera_error_str;
+	THROW_HW_ERROR(Error) << "Cannot get detector size";                    
     }     
     size= Size(xmax, ymax);
 }
 
 
 //-----------------------------------------------------
-//- Camera::getImageType()
+// @brief return the image type 
 //-----------------------------------------------------
 void Camera::getImageType(ImageType& type)
 {
@@ -457,7 +483,9 @@ void Camera::getImageType(ImageType& type)
     // --- Get the AD channel dynamic range in bits per pixel
     // --- suppose here channel 0 is set, in fact we do not provide any
     // --- command to select a different ADC if the detector has several.
-    if (andorError(GetBitDepth(0, &bits)))
+    DEB_TRACE() << "m_adc = "<< m_adc;
+    
+    if (andorError(GetBitDepth(m_adc, &bits)))
     {
         DEB_ERROR() << "Cannot get detector bit depth" << " : error code = " << m_camera_error_str;
         THROW_HW_ERROR(Error) << "Cannot get detector bit depth";                        
@@ -465,23 +493,30 @@ void Camera::getImageType(ImageType& type)
     // --- not clear from documentation with bit depth are possible
     // --- according to the AndorCapabilites structure cameras can support more image type
     // --- with color ones as well.
-        
-    if (bits <= 8) type = Bpp8;
-    else if (bits <= 16) type = Bpp16;
-    else if (bits <=32) type = Bpp32;
-    else type = Bpp16;    
+ 
+ 
+    if (bits <=8) type = Bpp8;
+    else if (bits <=16) type = Bpp16;
+    else type = Bpp32;
+       
+    // --- previous code do not return the data image type.
+    // --- can either be bpp16 or bpp32, just depends on the function used
+    // --- to read the image (GetImages()- 32bpp, GetImage16() - 16bpp
+    // ---  will later on add support for 32bpp if requested.
+
 }
 
 //-----------------------------------------------------
-//- Camera::setImageType()
+// @brief set the image type, if supported
 //-----------------------------------------------------
 void Camera::setImageType(ImageType type)
 {
     DEB_MEMBER_FUNCT();
+    // --- see above for future immprovement
     return;
 }
 //-----------------------------------------------------
-//- Camera::getDetectorType()
+// @brief return the detector type
 //-----------------------------------------------------
 void Camera::getDetectorType(string& type)
 {
@@ -491,7 +526,7 @@ void Camera::getDetectorType(string& type)
 }
 
 //-----------------------------------------------------
-//- Camera::getDetectorModel()
+// @brief return the detector model
 //-----------------------------------------------------
 void Camera::getDetectorModel(string& type)
 {
@@ -500,7 +535,7 @@ void Camera::getDetectorModel(string& type)
 }
 
 //-----------------------------------------------------
-//- Camera::getBufferMgr()
+// @brief return the internal buffer manager
 //-----------------------------------------------------
 HwBufferCtrlObj* Camera::getBufferMgr()
 {
@@ -510,7 +545,7 @@ HwBufferCtrlObj* Camera::getBufferMgr()
 
 
 //-----------------------------------------------------
-//- Camera::checkTrigMode()
+// @brief return true if passed trigger mode is supported
 //-----------------------------------------------------
 bool Camera::checkTrigMode(TrigMode trig_mode)
 {
@@ -520,37 +555,37 @@ bool Camera::checkTrigMode(TrigMode trig_mode)
 
 
 
-   switch (trig_mode)
+    switch (trig_mode)
     {       
-        case IntTrig:
-        case IntTrigMult:
-        case ExtTrigSingle:
-        case ExtGate:
-            andorError(IsTriggerModeAvailable(m_trig_mode_maps[trig_mode]));
-            switch (m_camera_error)
-            {
-                case DRV_SUCCESS:
-                    valid_mode = true;
-                    break;
-                case DRV_INVALID_MODE:
-                    valid_mode = false;
-                    break;
-                case DRV_NOT_INITIALIZED:                
-                    valid_mode = false;
-                    DEB_ERROR() << "System not initializsed, cannot get trigger mode status" << " : error code = " << m_camera_error_str;
-                    THROW_HW_ERROR(Error) << "System not initializsed, cannot get trigger mode status";
-                    break;                                                     
-            }                
+    case IntTrig:
+    case IntTrigMult:
+    case ExtTrigSingle:
+    case ExtGate:
+	m_camera_error = IsTriggerModeAvailable(m_trig_mode_maps[trig_mode]);
+	switch (m_camera_error)
+	{
+	case DRV_SUCCESS:
+	    valid_mode = true;
+	    break;
+	case DRV_INVALID_MODE:
+	    valid_mode = false;
+	    break;
+	case DRV_NOT_INITIALIZED:                
+	    valid_mode = false;
+	    DEB_ERROR() << "System not initializsed, cannot get trigger mode status" << " : error code = " << m_camera_error_str;
+	    THROW_HW_ERROR(Error) << "System not initializsed, cannot get trigger mode status";
+	    break;                                                     
+	}                
         break;
 
-        default:
-            valid_mode = false;
+    default:
+	valid_mode = false;
         break;
     }
     return valid_mode;
 }
 //-----------------------------------------------------
-//- Camera::setTrigMode()
+// @brief set the new trigger mode
 //-----------------------------------------------------
 void Camera::setTrigMode(TrigMode mode)
 {
@@ -566,7 +601,7 @@ void Camera::setTrigMode(TrigMode mode)
 }
 
 //-----------------------------------------------------
-//- Camera::getTrigMode()
+// @brief return the current trigger mode
 //-----------------------------------------------------
 void Camera::getTrigMode(TrigMode& mode)
 {
@@ -578,7 +613,7 @@ void Camera::getTrigMode(TrigMode& mode)
 
 
 //-----------------------------------------------------
-//- Camera::setExpTime()
+// @brief set the new exposure time
 //-----------------------------------------------------
 void Camera::setExpTime(double exp_time)
 {
@@ -595,7 +630,7 @@ void Camera::setExpTime(double exp_time)
 }
 
 //-----------------------------------------------------
-//- Camera::getExpTime()
+// @brief return the current exposure time
 //-----------------------------------------------------
 void Camera::getExpTime(double& exp_time)
 {
@@ -619,7 +654,7 @@ void Camera::getExpTime(double& exp_time)
 }
 
 //-----------------------------------------------------
-//- Camera::setLatTime()
+// @brief set the new latency time between images
 //-----------------------------------------------------
 void Camera::setLatTime(double lat_time)
 {
@@ -648,7 +683,7 @@ void Camera::setLatTime(double lat_time)
 }
 
 //-----------------------------------------------------
-//- Camera::getLatTime()
+// @brief return the current latency time
 //-----------------------------------------------------
 void Camera::getLatTime(double& lat_time)
 {
@@ -675,7 +710,7 @@ void Camera::getLatTime(double& lat_time)
 }
 
 //-----------------------------------------------------
-//- Camera::getExposureTimeRange()
+// @brief returnt the exposure time range
 //-----------------------------------------------------
 void Camera::getExposureTimeRange(double& min_expo, double& max_expo) const
 {
@@ -688,7 +723,7 @@ void Camera::getExposureTimeRange(double& min_expo, double& max_expo) const
 }
 
 //-----------------------------------------------------
-//- Camera::getLatTimeRange()
+// @brief return the latency time range
 //-----------------------------------------------------
 void Camera::getLatTimeRange(double& min_lat, double& max_lat) const
 {   
@@ -704,7 +739,7 @@ void Camera::getLatTimeRange(double& min_lat, double& max_lat) const
 }
 
 //-----------------------------------------------------
-//- Camera::setNbFrames()
+// @brief set the number of frames to be taken
 //-----------------------------------------------------
 void Camera::setNbFrames(int nb_frames)
 {
@@ -727,7 +762,7 @@ void Camera::setNbFrames(int nb_frames)
 }
 
 //-----------------------------------------------------
-//- Camera::getNbFrames()
+// @brief return the number of frames to be taken
 //-----------------------------------------------------
 void Camera::getNbFrames(int& nb_frames)
 {
@@ -737,7 +772,7 @@ void Camera::getNbFrames(int& nb_frames)
 }
 
 //-----------------------------------------------------
-//- Camera::getNbHwAcquiredFrames()
+// @brief return the current acquired frames
 //-----------------------------------------------------
 void Camera::getNbHwAcquiredFrames(int &nb_acq_frames)
 { 
@@ -746,7 +781,7 @@ void Camera::getNbHwAcquiredFrames(int &nb_acq_frames)
 }
   
 //-----------------------------------------------------
-//- Camera::getStatus()
+// @brief return the camera status
 //-----------------------------------------------------
 void Camera::getStatus(Camera::Status& status)
 {
@@ -757,7 +792,7 @@ void Camera::getStatus(Camera::Status& status)
 }
 
 //-----------------------------------------------------
-//- Camera::setStatus()
+// @brief set the new camera status
 //-----------------------------------------------------
 void Camera::_setStatus(Camera::Status status,bool force)
 {
@@ -768,7 +803,7 @@ void Camera::_setStatus(Camera::Status status,bool force)
     m_cond.broadcast();
 }
 //-----------------------------------------------------
-//- Camera::checkRoi()
+// @brief do nothing, hw_roi = set_roi.
 //-----------------------------------------------------
 void Camera::checkRoi(const Roi& set_roi, Roi& hw_roi)
 {
@@ -780,7 +815,7 @@ void Camera::checkRoi(const Roi& set_roi, Roi& hw_roi)
 }
 
 //-----------------------------------------------------
-//- Camera::setRoi()
+// @brief set the new roi
 //-----------------------------------------------------
 void Camera::setRoi(const Roi& set_roi)
 {
@@ -788,29 +823,37 @@ void Camera::setRoi(const Roi& set_roi)
     DEB_PARAM() << DEB_VAR1(set_roi);
 
     Point topleft, size;
-    
     int hstart, hend, vstart, vend;
+    Roi hw_roi;
 
-    if(m_roi == set_roi) return;
+    if(m_roi == set_roi) return;    
                
-    if(set_roi.isActive())
+    if(set_roi.isActive()) hw_roi = set_roi;
+    else
     {
-        // --- Andor sets the ROI by starting coordinates at 1 and not 0 !!!!
-        topleft = set_roi.getTopLeft(); size = set_roi.getSize();
-        hstart = topleft.x+1;          vstart = topleft.y+1;
-        hend   = hstart + size.x;      vend   = vstart + size.y;
-        //- then fix the new ROI
-        if (andorError(SetImage(m_bin.getX(), m_bin.getY(), hstart, hend, vstart, vend)))
-        {
-            DEB_ERROR() << "Cannot set detector ROI" << " : error code = " << m_camera_error_str;
-            THROW_HW_ERROR(Error) << "Cannot set detector ROI";                                        
-        }
-        m_roi = set_roi;
+        // ROI has been reset (0x0)
+        // --- read back full frame size
+        Size sizeMax;
+        getDetectorImageSize(sizeMax);
+        hw_roi = Roi(0,0, sizeMax.getWidth(), sizeMax.getHeight());    
+    }    
+    // --- Andor sets the ROI by starting coordinates at 1 and not 0 !!!!
+    topleft = hw_roi.getTopLeft(); size = hw_roi.getSize();
+    hstart = topleft.x +1;          vstart = topleft.y +1;
+    hend   = hstart + size.x -1;      vend   = vstart + size.y -1;
+            
+    //- then fix the new ROI
+    if (andorError(SetImage(m_bin.getX(), m_bin.getY(), hstart, hend, vstart, vend)))
+    {
+        DEB_ERROR() << "Cannot set detector ROI" << " : error code = " << m_camera_error_str;
+        THROW_HW_ERROR(Error) << "Cannot set detector ROI";                                        
     }
+    // cache the real ROI, used when setting BIN
+    m_roi = hw_roi;
 }
 
 //-----------------------------------------------------
-//- Camera::getRoi()
+// @brief return the new roi 
 //-----------------------------------------------------
 void Camera::getRoi(Roi& hw_roi)
 {
@@ -822,7 +865,7 @@ void Camera::getRoi(Roi& hw_roi)
 }
 
 //-----------------------------------------------------
-//- Camera::checkBin()
+// @brief range the binning to the maximum allowed
 //-----------------------------------------------------
 void Camera::checkBin(Bin &hw_bin)
 {
@@ -841,7 +884,7 @@ void Camera::checkBin(Bin &hw_bin)
     DEB_RETURN() << DEB_VAR1(hw_bin);
 }
 //-----------------------------------------------------
-//- Camera::setBin()
+// @brief set the new binning mode
 //-----------------------------------------------------
 void Camera::setBin(const Bin &set_bin)
 {
@@ -856,7 +899,7 @@ void Camera::setBin(const Bin &set_bin)
     {
         topleft = m_roi.getTopLeft(); size = m_roi.getSize();
         hstart = topleft.x+1;          vstart = topleft.y+1;
-        hend   = hstart + size.x;      vend   = vstart + size.y;
+        hend   = hstart + size.x -1;      vend   = vstart + size.y -1;
         //- then fix the new BIN
     }
     else
@@ -876,7 +919,7 @@ void Camera::setBin(const Bin &set_bin)
 }
 
 //-----------------------------------------------------
-//- Camera::getBin()
+// @brief return the current binning mode
 //-----------------------------------------------------
 void Camera::getBin(Bin &hw_bin)
 {
@@ -888,7 +931,7 @@ void Camera::getBin(Bin &hw_bin)
 }
 
 //-----------------------------------------------------
-//- Camera::isBinningAvailable()
+// @brief return always true, hw binning mode is supported
 //-----------------------------------------------------
 bool Camera::isBinningAvailable()
 {
@@ -902,7 +945,7 @@ bool Camera::isBinningAvailable()
 
 
 //-----------------------------------------------------
-//- Camera::getPixelSize()
+// @brief return the detector pixel size in meter
 //-----------------------------------------------------
 void Camera::getPixelSize(double& size)
 {
@@ -919,12 +962,12 @@ void Camera::getPixelSize(double& size)
     // today just return x size supposing it the the same for y.
     // remember standard is metric units so size is in meter
     size = xsize * 1e-6;
-    DEB_RETURN() << DEB_VAR1(size);
- 
+    DEB_RETURN() << DEB_VAR1(size); 
 }
 
+
 //-----------------------------------------------------
-//- Camera::reset()
+// @brief reset the camera, no hw reset available on Andor camera
 //-----------------------------------------------------
 void Camera::reset()
 {
@@ -933,11 +976,8 @@ void Camera::reset()
 }
 
 
-
-
 //-----------------------------------------------------
-//- Camera::InitialiseController()
-// brief    initialise controller with speeds and preamp gain
+// @brief    initialise controller with speeds and preamp gain
 //-----------------------------------------------------
 void Camera::initialiseController()
 {
@@ -954,8 +994,8 @@ void Camera::initialiseController()
     }
         
     // --- Set adc / speed
-    setAdcSpeed(m_adc);
-    DEB_TRACE() << "    => Set to " << m_adc_speeds[m_adc].speed << "MHz";
+    setAdcSpeed(m_adc_speed_max);
+    DEB_TRACE() << "    => Set to " << m_adc_speeds[m_adc_speed_max].speed << "MHz";
        
         
     // --- Init VS Speeds 
@@ -964,7 +1004,7 @@ void Camera::initialiseController()
     DEB_TRACE() << "* Vertical Shift Speed:";
     for (is=0; is<m_vss_number; is++)
     {
-        DEB_TRACE() << "    (" << is << ") speed = " << m_vsspeeds[m_vss] << " us"
+        DEB_TRACE() << "    (" << is << ") speed = " << m_vsspeeds[is] << " us"
                     << ((is == m_vss_best)? " [recommended]": "");
     }
         
@@ -989,8 +1029,7 @@ void Camera::initialiseController()
     DEB_TRACE() << "    => Set to x" << m_preamp_gains[m_gain];                 
 }
 //-----------------------------------------------------
-//- Camera::initAdcSpeed()
-// brief	Get possible adc/speed for controller
+// @brief get possible adc/speed for controller
 //
 // Initialise the list of possible pairs adc/speed
 // and find the maximum speed.
@@ -999,58 +1038,58 @@ void Camera::initialiseController()
 void Camera::initAdcSpeed()
 {
     DEB_MEMBER_FUNCT();
-	int		ih, ia, is, nadc, *nSpeed;
-	float	speedMax;
+    int		ih, ia, is, nadc, *nSpeed;
+    float	speedMax;
     
     
-	// --- number of ADC
-	if (andorError(GetNumberADChannels(&nadc))) 
+    // --- number of ADC
+    if (andorError(GetNumberADChannels(&nadc))) 
     {
         DEB_ERROR() << "Cannot get number of ADC" <<" : error code = " << m_camera_error_str;
         THROW_HW_ERROR(Error) << "Cannot get number of ADC";            
-	}
-	// --- Get Horizontal Shift Speed per ADC
+    }
+    // --- Get Horizontal Shift Speed per ADC
     nSpeed = new int[nadc];
     
-	m_adc_speed_number= 0;
-	for (ia=0; ia<nadc; ia++) {
-		if (andorError(GetNumberHSSpeeds(ia, 0, &nSpeed[ia]))) {
-			DEB_ERROR() << "Cannot get nb of Horizontal Speed for ADC " <<  ia <<" : error code = " << m_camera_error_str;
-			THROW_HW_ERROR(Error) << "Cannot get nb of Horizontal Speed for an ADC";            
-		}
-		m_adc_speed_number += nSpeed[ia];
-			
+    m_adc_speed_number= 0;
+    for (ia=0; ia<nadc; ia++) 
+    {
+	if (andorError(GetNumberHSSpeeds(ia, 0, &nSpeed[ia]))) {
+	    DEB_ERROR() << "Cannot get nb of Horizontal Speed for ADC " <<  ia <<" : error code = " << m_camera_error_str;
+	    THROW_HW_ERROR(Error) << "Cannot get nb of Horizontal Speed for an ADC";            
 	}
+	m_adc_speed_number += nSpeed[ia];
+			
+    }
 
-	m_adc_speeds = new Adc[m_adc_speed_number];
-	speedMax= 0.;
-	is= 0;
-	for (ia=0; ia<nadc; ia++) {
-		for (ih=0; ih<nSpeed[ia]; ih++) {
-			if (andorError(GetHSSpeed(ia, 0, ih, &m_adc_speeds[is].speed))) {
+    m_adc_speeds = new Adc[m_adc_speed_number];
+    speedMax= 0.;
+    is= 0;
+    for (ia=0; ia<nadc; ia++) {
+	for (ih=0; ih<nSpeed[ia]; ih++) {
+	    if (andorError(GetHSSpeed(ia, 0, ih, &m_adc_speeds[is].speed))) {
                 DEB_ERROR() << "Cannot get Horizontal Speed " << ih << " for ADC " << ia <<" : error code = " << m_camera_error_str;
                 THROW_HW_ERROR(Error) << "Cannot get Horizontal Speed ";            
-			}
-			m_adc_speeds[is].adc= ia;
-			m_adc_speeds[is].hss= ih;
+	    }
+	    m_adc_speeds[is].adc= ia;
+	    m_adc_speeds[is].hss= ih;
 
-			// --- iKon/iXon= speed in MHz ; others in us/pixel shift --> convert in MHz
-			if ((m_camera_capabilities.ulCameraType!=1)&&(m_camera_capabilities.ulCameraType!=13))
-				m_adc_speeds[is].speed = (float)(1./ m_adc_speeds[is].speed);
+	    // --- iKon/iXon= speed in MHz ; others in us/pixel shift --> convert in MHz
+	    if ((m_camera_capabilities.ulCameraType!=1)&&(m_camera_capabilities.ulCameraType!=13))
+		m_adc_speeds[is].speed = (float)(1./ m_adc_speeds[is].speed);
 
-			if (m_adc_speeds[is].speed > speedMax) {
-				speedMax= m_adc_speeds[is].speed;
-				m_adc_speed_max= is;
-			}
-			is++;
-		}
-	}      
+	    if (m_adc_speeds[is].speed > speedMax) {
+		speedMax= m_adc_speeds[is].speed;
+		m_adc_speed_max= is;
+	    }
+	    is++;
+	}
+    }      
 }
 
 //-----------------------------------------------------
-//- Camera::SetAdcSpeed()
-// brief	Sets ADC/Speed settings
-// param	adc pais adc/speed index (if =-1, set to max speed)
+// @brief	get ADC/Speed settings
+// @param	adc pais adc/speed index (if =-1, set to max speed)
 //
 //-----------------------------------------------------
 void Camera::setAdcSpeed(int adc)
@@ -1084,8 +1123,7 @@ void Camera::setAdcSpeed(int adc)
 
 
 //-----------------------------------------------------
-//- Camera::initVSS()
-// brief Get possible VSS (vertical shift speed) for controller
+// @brief get possible VSS (vertical shift speed) for controller
 //
 // Initialise the list of possible vss index and their value
 // Get also the recommended VSS.
@@ -1093,139 +1131,136 @@ void Camera::setAdcSpeed(int adc)
 void Camera::initVSS()
 {
     DEB_MEMBER_FUNCT();
-	float speed;
-	int ivss;
+    float speed;
+    int ivss;
 
 
-	// --- number of ADC
-	if (andorError(GetNumberVSSpeeds(&m_vss_number)))
+    // --- number of ADC
+    if (andorError(GetNumberVSSpeeds(&m_vss_number)))
     {
         DEB_ERROR() << "Cannot get number of possible VSS" <<" : error code = " << m_camera_error_str;
         THROW_HW_ERROR(Error) << "Cannot get number of possible VSS";            
-	}
+    }
 
-	// --- get VSS value for each
-	m_vsspeeds = new float[m_vss_number];
-	for (ivss=0; m_vss_number; ivss++)
+    // --- get VSS value for each
+    m_vsspeeds = new float[m_vss_number];
+    for (ivss=0; ivss<m_vss_number; ivss++)
     {
-		if (andorError(GetVSSpeed(ivss, &m_vsspeeds[ivss])))
+	if (andorError(GetVSSpeed(ivss, &m_vsspeeds[ivss])))
         {
-			DEB_ERROR() << "Cannot get VSS value for #" << ivss <<" : error code = " << m_camera_error_str;
+	    DEB_ERROR() << "Cannot get VSS value for #" << ivss <<" : error code = " << m_camera_error_str;
             THROW_HW_ERROR(Error) << "Cannot get VSS value";
-		}
 	}
+    }
 
-	// --- get recommended VSS value
-	if (andorError(GetFastestRecommendedVSSpeed(&m_vss_best, &speed)))
+    // --- get recommended VSS value
+    if (andorError(GetFastestRecommendedVSSpeed(&m_vss_best, &speed)))
     {
-		m_vss_best = 0;
+	m_vss_best = 0;
         DEB_ERROR() << "Cannot get recommended VSS speed. Set it to 0" <<" : error code = " << m_camera_error_str;
         THROW_HW_ERROR(Error) << "Cannot get recommended VSS speed. Set it to 0";
 
-	}
+    }
 }
 
 
 //-----------------------------------------------------
-//- Camera::setVss()
-// brief	Sets Vertical Shift Speed
-// param	vss index (if =-1, set to recommended)
+// @brief	get Vertical Shift Speed
+// @param	vss index (if =-1, set to recommended)
 //
 //-----------------------------------------------------
 void Camera::setVSS(int vss) 
 {
     DEB_MEMBER_FUNCT();
-	int is;
+    int is;
 
-	if ((vss == -1)||(vss > m_vss_number))
+    if ((vss == -1)||(vss > m_vss_number))
     {
-		is = m_vss_best;
-	} 
+	is = m_vss_best;
+    } 
     else
     {
-		is = vss;
-	}
-	if (andorError(SetVSSpeed(is)))
+	is = vss;
+    }
+    if (andorError(SetVSSpeed(is)))
     {
-		DEB_ERROR() << "Failed to set VSS #" << is <<" : error code = " << m_camera_error_str;
+	DEB_ERROR() << "Failed to set VSS #" << is <<" : error code = " << m_camera_error_str;
         THROW_HW_ERROR(Error) << "Failed to set VSS";
-	}
-	m_vss = is;
+    }
+    m_vss = is;
 
-	DEB_TRACE() << "VSSpeed Set to " <<m_vsspeeds[is] << "us";
+    DEB_TRACE() << "VSSpeed Set to " <<m_vsspeeds[is] << "us";
 }
 
 //-----------------------------------------------------
-//- Camera::initPGain()
-// brief	Get possible Preamp Gain values
+// @brief	get possible Preamp Gain values
+//
 // Initialise the list of possible gain index and their value
 //
 //-----------------------------------------------------
 void Camera::initPGain()
 {
     DEB_MEMBER_FUNCT();
-	int ig;
-	float gmax;
+    int ig;
+    float gmax;
 
-	// --- get number of possible gains
-	if (andorError(GetNumberPreAmpGains(&m_gain_number)))
+    // --- get number of possible gains
+    if (andorError(GetNumberPreAmpGains(&m_gain_number)))
     {
-		DEB_ERROR() << "Failed to get number of preamp gain" <<" : error code = " << m_camera_error_str;
-		THROW_HW_ERROR(Error) << "Failed to get number of preamp gain";
-	}
+	DEB_ERROR() << "Failed to get number of preamp gain" <<" : error code = " << m_camera_error_str;
+	THROW_HW_ERROR(Error) << "Failed to get number of preamp gain";
+    }
 
-	// --- get gain value for each
-	gmax = 0.;
-	m_preamp_gains = new float[m_gain_number];
-	for (ig=0; ig<m_gain_number; ig++)
+    // --- get gain value for each
+    gmax = 0.;
+    m_preamp_gains = new float[m_gain_number];
+    for (ig=0; ig<m_gain_number; ig++)
     {
-		if (andorError(GetPreAmpGain(ig, &m_preamp_gains[ig])))
+	if (andorError(GetPreAmpGain(ig, &m_preamp_gains[ig])))
         {
-			DEB_ERROR() << "Failed to get gain #" << ig <<" : error code = " << m_camera_error_str;
-			THROW_HW_ERROR(Error) << "Failed to get gain";
-		}
-		if (m_preamp_gains[ig] >= gmax)
-        {
-			gmax = m_preamp_gains[ig];
-			m_gain_max = ig;
-		}
+	    DEB_ERROR() << "Failed to get gain #" << ig <<" : error code = " << m_camera_error_str;
+	    THROW_HW_ERROR(Error) << "Failed to get gain";
 	}
+	if (m_preamp_gains[ig] >= gmax)
+        {
+	    gmax = m_preamp_gains[ig];
+	    m_gain_max = ig;
+	}
+    }
 }
 
 //-----------------------------------------------------
-//- Camera::setPGain()
-// brief	Sets Preamp Gain
-//  param	premap gain index
+// @brief	set Preamp Gain
+// @param	gain premap gain index
 //
 //-----------------------------------------------------
 void Camera::setPGain(int gain) 
 {
     DEB_MEMBER_FUNCT();
-	int ig;
+    int ig;
 
-	if (gain==-1) 
+    if (gain==-1) 
     {
-		ig= m_gain_max;
-	}
+	ig= m_gain_max;
+    }
     else
     {
-		ig= gain;
-	}
+	ig= gain;
+    }
 
-	if (andorError(SetPreAmpGain(ig)))
+    if (andorError(SetPreAmpGain(ig)))
     {
-		DEB_ERROR() << "Failed to set Preamp Gain #" << ig <<" : error code = " << m_camera_error_str;
-		THROW_HW_ERROR(Error) << "Failed to set Preamp Gain";
-	}
-	m_gain= ig;
+	DEB_ERROR() << "Failed to set Preamp Gain #" << ig <<" : error code = " << m_camera_error_str;
+	THROW_HW_ERROR(Error) << "Failed to set Preamp Gain";
+    }
+    m_gain= ig;
 
-	DEB_TRACE() << "Preamp Gain set to x" << m_preamp_gains[ig];
+    DEB_TRACE() << "Preamp Gain set to x" << m_preamp_gains[ig];
 }
 
 //-----------------------------------------------------
-//- Camera::setFastExtTrigger()
-// brief	Sets external trigger for fast mode
-//  param	fast or not (boolean)
+// @brief	set external trigger for fast mode
+// @param	flag fast or not (boolean)
 //
 //-----------------------------------------------------
 void Camera::setFastExtTrigger(bool flag)
@@ -1241,9 +1276,8 @@ void Camera::setFastExtTrigger(bool flag)
 }
 
 //-----------------------------------------------------
-//- Camera::getFastExtTrigger()
-// brief	Gets external fast trigger mode
-//  param	fast or not (boolean)
+// @brief	get external fast trigger mode
+// @param	flag fast or not (boolean)
 //
 //-----------------------------------------------------
 void Camera::getFastExtTrigger(bool& flag)
@@ -1253,12 +1287,9 @@ void Camera::getFastExtTrigger(bool& flag)
 }
 
 
-
-
 //-----------------------------------------------------
-//- Camera::setShutterLevel()
-// brief	Sets the shutter output level
-//  param	0 or 1
+// @brief	set the shutter output level
+// @param	level 0 or 1
 //
 //-----------------------------------------------------
 void Camera::setShutterLevel(int level)
@@ -1274,9 +1305,8 @@ void Camera::setShutterLevel(int level)
 }
 
 //-----------------------------------------------------
-//- Camera::getShutterLevel()
-// brief	Gets the shutter output level
-//  param	0 or 1
+// @brief	get the shutter output level
+// @param	level 0 or 1
 //
 //-----------------------------------------------------
 void Camera::getShutterLevel(int& level)
@@ -1287,65 +1317,133 @@ void Camera::getShutterLevel(int& level)
 
 
 //-----------------------------------------------------
-//- Camera::setShutterOpenTime()
-// brief	Set the shutter opening time
-//  param	time in milliseconds
+// @brief	set the shutter mode 
+// @param	mode FRAME or MANUAL
 //
 //-----------------------------------------------------
-void Camera::setShutterOpenTime(int tm)
+void Camera::setShutterMode(ShutterMode mode)
 {
     DEB_MEMBER_FUNCT();
-    if (andorError(SetShutter(m_shutter_level, m_shutter_mode, m_shutter_close_time, tm)))
+    // --- SetShutter() param mode is both used to set  auto or manual mode and to open and close
+    // --- 0 - Auto, 1 - Open, 2 - Close
+    int aMode = (mode == FRAME)? 0:2;
+    if (mode == FRAME)
+    {    
+        if (andorError(SetShutter(m_shutter_level, aMode, m_shutter_close_time, m_shutter_open_time)))
+        {
+            DEB_ERROR() << "Failed to set the shutter mode" <<" : error code = " << m_camera_error_str;
+            THROW_HW_ERROR(Error) << "Failed to set the shutter mode";          
+        }
+    }
+    m_shutter_mode = mode;
+}
+
+//-----------------------------------------------------
+// @brief	return the shutter mode
+// @param	mode FRAME or MANUAL
+//
+//-----------------------------------------------------
+void Camera::getShutterMode(ShutterMode& mode)
+{
+    DEB_MEMBER_FUNCT();
+    mode = m_shutter_mode;
+}
+
+
+//-----------------------------------------------------
+// @brief	set the shutter open or close
+// @param	flag True-Open / False-Close
+//
+//-----------------------------------------------------
+void Camera::setShutter(bool flag)
+{
+    DEB_MEMBER_FUNCT();
+    // --- SetShutter() param mode is both used to set in auto or manual mode and to open and close
+    // --- 0 - Auto, 1 - Open, 2 - Close
+    int aMode = (flag)? 1:2; 
+    if (andorError(SetShutter(m_shutter_level, aMode, m_shutter_close_time, m_shutter_open_time)))
+    {
+        DEB_ERROR() << "Failed close/open the shutter" <<" : error code = " << m_camera_error_str;
+        THROW_HW_ERROR(Error) << "Failed to set close/open the shutter";          
+    }
+    m_shutter_state = flag;
+}
+
+
+//-----------------------------------------------------
+// @brief	return the status of the shutter
+// @param	flag True-Open / False-Close
+//
+//-----------------------------------------------------
+void Camera::getShutter(bool& flag)
+{
+    DEB_MEMBER_FUNCT();
+    flag = m_shutter_state;
+}
+
+//-----------------------------------------------------
+// @brief	set the shutter opening time
+// @param	tm time in seconds
+//
+//-----------------------------------------------------
+void Camera::setShutterOpenTime(double tm)
+{
+    DEB_MEMBER_FUNCT();
+    int aTime = tm *1000;
+    
+    if (andorError(SetShutter(m_shutter_level, m_shutter_mode, m_shutter_close_time, aTime)))
     {
         DEB_ERROR() << "Failed to set shutter openning time" <<" : error code = " << m_camera_error_str;
         THROW_HW_ERROR(Error) << "Failed to set shutter opening time";          
     }
-    m_shutter_open_time = tm;
+    m_shutter_open_time = aTime;
 }
 
 //-----------------------------------------------------
-//- Camera::geShutterOpenTime()
-// brief	Gets the shutter opening time
-//  param   time in milliseconds
+// @brief	get the shutter opening time
+// @param   tm time in seconds
 //
 //-----------------------------------------------------
-void Camera::geShutterOpenTime(int& tm)
+void Camera::getShutterOpenTime(double& tm)
 {
     DEB_MEMBER_FUNCT();
-    tm = m_shutter_open_time;
+    tm = m_shutter_open_time/1000;
 }
 
 //-----------------------------------------------------
-//- Camera::setShutterCloseTime()
-// brief	Gets the shutter closing time
-//  param	time in milliseconds
+// @brief	set the shutter closing time
+// @param	tm time in seconds
 //
 //-----------------------------------------------------
-void Camera::setShutterCloseTime(int tm)
+void Camera::setShutterCloseTime(double tm)
 {
     DEB_MEMBER_FUNCT();
-    if (andorError(SetShutter(m_shutter_level, m_shutter_mode, tm, m_shutter_open_time)))
+    int aTime = tm *1000;
+    
+    if (andorError(SetShutter(m_shutter_level, m_shutter_mode, aTime, m_shutter_open_time)))
     {
         DEB_ERROR() << "Failed to set shutter closing time" <<" : error code = " << m_camera_error_str;
         THROW_HW_ERROR(Error) << "Failed to set shutter closing time";          
     }
-    m_shutter_close_time = tm;
+    m_shutter_close_time = aTime;
 }
+
+
 //-----------------------------------------------------
-//- Camera::geShutterCloseTime()
-// brief	Gets the shutter closing time
-//  param	time in milliseconds
+// @brief	get the shutter closing time
+// @param	tm time in seconds
 //
 //-----------------------------------------------------
-void Camera::geShutterCloseTime(int& tm)
+void Camera::getShutterCloseTime(double& tm)
 {
     DEB_MEMBER_FUNCT();
-    tm = m_shutter_close_time;
+    tm = m_shutter_close_time/1000;
 }
+
+
 //-----------------------------------------------------
-//- Camera::setTemperatureSP()
-// brief	Set the temperature set-point
-//  param	temperature in centigrade
+// @brief	set the temperature set-point
+// @param	temperature in centigrade
 //
 //-----------------------------------------------------
 void Camera::setTemperatureSP(int temp)
@@ -1358,10 +1456,11 @@ void Camera::setTemperatureSP(int temp)
     }
     m_temperature_sp = temp;
 }
+
+
 //-----------------------------------------------------
-//- Camera::getTemperature()
-// brief	Gets the real temperature of the detector sensor 
-//  param	temperature in centigrade
+// @brief	Gets the real temperature of the detector sensor 
+// @param	temp temperature in centigrade
 //
 //-----------------------------------------------------
 void Camera::getTemperature(int& temp)
@@ -1377,9 +1476,8 @@ void Camera::getTemperature(int& temp)
     temp = tm;   
 }
 //-----------------------------------------------------
-//- Camera::setCooler()
-// brief	start or Stop the cooler 
-//  param	true-on, false-off
+// @brief	start or Stop the cooler 
+// @param	flag true-on, false-off
 //
 //-----------------------------------------------------
 void Camera::setCooler(bool flag)
@@ -1405,9 +1503,8 @@ void Camera::setCooler(bool flag)
     m_cooler = flag;        
 }
 //-----------------------------------------------------
-//- Camera::getCooler()
-// brief	Get the Cooler status  
-//  param	true-on, false-off
+// @brief	Get the Cooler status  
+// @param	flag true-on, false-off
 //
 //-----------------------------------------------------
 void Camera::getCooler(bool& flag)
@@ -1417,9 +1514,8 @@ void Camera::getCooler(bool& flag)
 }
 
 //-----------------------------------------------------
-//- Camera::getCoolingStatus()
-// brief	Gets cooling status
-//  param	status as a string
+// @brief	Gets cooling status
+// @param	status status as a string
 //
 //-----------------------------------------------------
 void Camera::getCoolingStatus(std::string& status)   
@@ -1436,27 +1532,27 @@ void Camera::getCoolingStatus(std::string& status)
 
     switch (stat)
     {
-        case DRV_NOT_INITIALIZED:
-            status = "System not initialized"; break;
-        case DRV_ACQUIRING:
-            status = "Acquisition in progress"; break;        
-        case DRV_TEMP_OFF:
-            status = "Temperature is OFF"; break;        
-        case DRV_TEMP_STABILIZED:
-            status = "Temperature has stabilized at set point"; break;        
-        case DRV_TEMP_NOT_REACHED:
-            status = "Temperature has not reached set point"; break;        
-        case DRV_TEMP_DRIFT:
-            status = "Temperature had stabilized but has since drifted"; break;        
-        case DRV_TEMP_NOT_STABILIZED:
-            status = "Temperature reached but not stabilized"; break;
-        default:
-            status = "???";                                                                   
+    case DRV_NOT_INITIALIZED:
+	status = "System not initialized"; break;
+    case DRV_ACQUIRING:
+	status = "Acquisition in progress"; break;        
+    case DRV_TEMP_OFF:
+	status = "Temperature is OFF"; break;        
+    case DRV_TEMP_STABILIZED:
+	status = "Temperature has stabilized at set point"; break;        
+    case DRV_TEMP_NOT_REACHED:
+	status = "Temperature has not reached set point"; break;        
+    case DRV_TEMP_DRIFT:
+	status = "Temperature had stabilized but has since drifted"; break;        
+    case DRV_TEMP_NOT_STABILIZED:
+	status = "Temperature reached but not stabilized"; break;
+    default:
+	status = "???";                                                                   
     }    
 }
 
 //-----------------------------------------------------
-//- Camera::andorError()
+// @brief handle the andor error codes
 //-----------------------------------------------------
 bool Camera::andorError(unsigned int code)
 {
@@ -1464,155 +1560,137 @@ bool Camera::andorError(unsigned int code)
     {
         m_camera_error = code;
         m_camera_error_str = m_andor_error_maps[code];
-        return false;
+        return true;
     }
-    return true;
+    return false;
 }
 
 //-----------------------------------------------------
-//- Camera::_mapAndorError()
+// @brief just build a map of error codes
 //-----------------------------------------------------
 void Camera::_mapAndorError()
 {
-m_andor_error_maps[DRV_ERROR_CODES] = "DRV_ERROR_CODES";
-m_andor_error_maps[DRV_SUCCESS] = "DRV_SUCCESS";
-m_andor_error_maps[DRV_VXDNOTINSTALLED] = "DRV_VXDNOTINSTALLED";
-m_andor_error_maps[DRV_ERROR_SCAN] = "DRV_ERROR_SCAN";
-m_andor_error_maps[DRV_ERROR_CHECK_SUM] = "DRV_ERROR_CHECK_SUM";
-m_andor_error_maps[DRV_ERROR_FILELOAD] = "";
-m_andor_error_maps[DRV_UNKNOWN_FUNCTION] = "";
-m_andor_error_maps[DRV_ERROR_VXD_INIT] = "";
-m_andor_error_maps[DRV_ERROR_ADDRESS] = "";
-m_andor_error_maps[DRV_ERROR_PAGELOCK] = "";
-m_andor_error_maps[DRV_ERROR_PAGEUNLOCK] = "";
-m_andor_error_maps[DRV_ERROR_BOARDTEST] = "";
-m_andor_error_maps[DRV_ERROR_ACK] = "";
-m_andor_error_maps[DRV_ERROR_UP_FIFO] = "";
-m_andor_error_maps[DRV_ERROR_PATTERN] = "";
-
-m_andor_error_maps[DRV_ACQUISITION_ERRORS] = "";
-m_andor_error_maps[DRV_ACQ_BUFFER] = "";
-m_andor_error_maps[DRV_ACQ_DOWNFIFO_FULL] = "";
-m_andor_error_maps[DRV_PROC_UNKONWN_INSTRUCTION] = "";
-m_andor_error_maps[DRV_ILLEGAL_OP_CODE] = "";
-m_andor_error_maps[DRV_KINETIC_TIME_NOT_MET] = "";
-m_andor_error_maps[DRV_ACCUM_TIME_NOT_MET] = "";
-m_andor_error_maps[DRV_NO_NEW_DATA] = "";
-m_andor_error_maps[KERN_MEM_ERROR] = "";
-m_andor_error_maps[DRV_SPOOLERROR] = "";
-m_andor_error_maps[DRV_SPOOLSETUPERROR] = "";
-m_andor_error_maps[DRV_FILESIZELIMITERROR] = "";
-m_andor_error_maps[DRV_ERROR_FILESAVE] = "";
-
-m_andor_error_maps[DRV_TEMPERATURE_CODES] = "";
-m_andor_error_maps[DRV_TEMPERATURE_OFF] = "";
-m_andor_error_maps[DRV_TEMPERATURE_NOT_STABILIZED] = "";
-m_andor_error_maps[DRV_TEMPERATURE_STABILIZED] = "";
-m_andor_error_maps[DRV_TEMPERATURE_NOT_REACHED] = "";
-m_andor_error_maps[DRV_TEMPERATURE_OUT_RANGE] = "";
-m_andor_error_maps[DRV_TEMPERATURE_NOT_SUPPORTED] = "";
-m_andor_error_maps[DRV_TEMPERATURE_DRIFT] = "";
-
-m_andor_error_maps[DRV_TEMP_CODES] = "";
-m_andor_error_maps[DRV_TEMP_OFF] = "";
-m_andor_error_maps[DRV_TEMP_NOT_STABILIZED] = "";
-m_andor_error_maps[DRV_TEMP_STABILIZED] = "";
-m_andor_error_maps[DRV_TEMP_NOT_REACHED] = "";
-m_andor_error_maps[DRV_TEMP_OUT_RANGE] = "";
-m_andor_error_maps[DRV_TEMP_NOT_SUPPORTED] = "";
-m_andor_error_maps[DRV_TEMP_DRIFT] = "";
-
-m_andor_error_maps[DRV_GENERAL_ERRORS] = "";
-m_andor_error_maps[DRV_INVALID_AUX] = "";
-m_andor_error_maps[DRV_COF_NOTLOADED] = "";
-m_andor_error_maps[DRV_FPGAPROG] = "";
-m_andor_error_maps[DRV_FLEXERROR] = "";
-m_andor_error_maps[DRV_GPIBERROR] = "";
-m_andor_error_maps[DRV_EEPROMVERSIONERROR] = "";
-
-m_andor_error_maps[DRV_DATATYPE] = "";
-m_andor_error_maps[DRV_DRIVER_ERRORS] = "";
-m_andor_error_maps[DRV_P1INVALID] = "";
-m_andor_error_maps[DRV_P2INVALID] = "";
-m_andor_error_maps[DRV_P3INVALID] = "";
-m_andor_error_maps[DRV_P4INVALID] = "";
-m_andor_error_maps[DRV_INIERROR] = "";
-m_andor_error_maps[DRV_COFERROR] = "";
-m_andor_error_maps[DRV_ACQUIRING] = "";
-m_andor_error_maps[DRV_IDLE] = "";
-m_andor_error_maps[DRV_TEMPCYCLE] = "";
-m_andor_error_maps[DRV_NOT_INITIALIZED] = "";
-m_andor_error_maps[DRV_P5INVALID] = "";
-m_andor_error_maps[DRV_P6INVALID] = "";
-m_andor_error_maps[DRV_INVALID_MODE] = "";
-m_andor_error_maps[DRV_INVALID_FILTER] = "";
-
-m_andor_error_maps[DRV_I2CERRORS] = "";
-m_andor_error_maps[DRV_I2CDEVNOTFOUND] = "";
-m_andor_error_maps[DRV_I2CTIMEOUT] = "";
-m_andor_error_maps[DRV_P7INVALID] = "";
-m_andor_error_maps[DRV_P8INVALID] = "";
-m_andor_error_maps[DRV_P9INVALID] = "";
-m_andor_error_maps[DRV_P10INVALID] = "";
-m_andor_error_maps[DRV_P11INVALID] = "";
-
-m_andor_error_maps[DRV_USBERROR] = "";
-m_andor_error_maps[DRV_IOCERROR] = "";
-m_andor_error_maps[DRV_VRMVERSIONERROR] = "";
-m_andor_error_maps[DRV_GATESTEPERROR] = "";
-m_andor_error_maps[DRV_USB_INTERRUPT_ENDPOINT_ERROR] = "";
-m_andor_error_maps[DRV_RANDOM_TRACK_ERROR] = "";
-m_andor_error_maps[DRV_INVALID_TRIGGER_MODE] = "";
-m_andor_error_maps[DRV_LOAD_FIRMWARE_ERROR] = "";
-m_andor_error_maps[DRV_DIVIDE_BY_ZERO_ERROR] = "";
-m_andor_error_maps[DRV_INVALID_RINGEXPOSURES] = "";
-m_andor_error_maps[DRV_BINNING_ERROR] = "";
-m_andor_error_maps[DRV_INVALID_AMPLIFIER] = "";
-m_andor_error_maps[DRV_INVALID_COUNTCONVERT_MODE] = "";
-
-m_andor_error_maps[DRV_ERROR_NOCAMERA] = "";
-m_andor_error_maps[DRV_NOT_SUPPORTED] = "";
-m_andor_error_maps[DRV_NOT_AVAILABLE] = "";
-
-m_andor_error_maps[DRV_ERROR_MAP] = "";
-m_andor_error_maps[DRV_ERROR_UNMAP] = "";
-m_andor_error_maps[DRV_ERROR_MDL] = "";
-m_andor_error_maps[DRV_ERROR_UNMDL] = "";
-m_andor_error_maps[DRV_ERROR_BUFFSIZE] = "";
-m_andor_error_maps[DRV_ERROR_NOHANDLE] = "";
-
-m_andor_error_maps[DRV_GATING_NOT_AVAILABLE] = "";
-m_andor_error_maps[DRV_FPGA_VOLTAGE_ERROR] = "";
-
-m_andor_error_maps[DRV_OW_CMD_FAIL] = "";
-m_andor_error_maps[DRV_OWMEMORY_BAD_ADDR] = "";
-m_andor_error_maps[DRV_OWCMD_NOT_AVAILABLE] = "";
-m_andor_error_maps[DRV_OW_NO_SLAVES] = "";
-m_andor_error_maps[DRV_OW_NOT_INITIALIZED] = "";
-m_andor_error_maps[DRV_OW_ERROR_SLAVE_NUM] = "";
-m_andor_error_maps[DRV_MSTIMINGS_ERROR] = "";
-
-m_andor_error_maps[DRV_OA_NULL_ERROR] = "";
-m_andor_error_maps[DRV_OA_PARSE_DTD_ERROR] = "";
-m_andor_error_maps[DRV_OA_DTD_VALIDATE_ERROR] = "";
-m_andor_error_maps[DRV_OA_FILE_ACCESS_ERROR] = "";
-m_andor_error_maps[DRV_OA_FILE_DOES_NOT_EXIST] = "";
-m_andor_error_maps[DRV_OA_XML_INVALID_OR_NOT_FOUND_ERROR] = "";
-m_andor_error_maps[DRV_OA_PRESET_FILE_NOT_LOADED] = "";
-m_andor_error_maps[DRV_OA_USER_FILE_NOT_LOADED] = "";
-m_andor_error_maps[DRV_OA_PRESET_AND_USER_FILE_NOT_LOADED] = "";
-m_andor_error_maps[DRV_OA_INVALID_FILE] = "";
-m_andor_error_maps[DRV_OA_FILE_HAS_BEEN_MODIFIED] = "";
-m_andor_error_maps[DRV_OA_BUFFER_FULL] = "";
-m_andor_error_maps[DRV_OA_INVALID_STRING_LENGTH] = "";
-m_andor_error_maps[DRV_OA_INVALID_CHARS_IN_NAME] = "";
-m_andor_error_maps[DRV_OA_INVALID_NAMING] = "";
-m_andor_error_maps[DRV_OA_GET_CAMERA_ERROR] = "";
-m_andor_error_maps[DRV_OA_MODE_ALREADY_EXISTS] = "";
-m_andor_error_maps[DRV_OA_STRINGS_NOT_EQUAL] = "";
-m_andor_error_maps[DRV_OA_NO_USER_DATA] = "";
-m_andor_error_maps[DRV_OA_VALUE_NOT_SUPPORTED] = "";
-m_andor_error_maps[DRV_OA_MODE_DOES_NOT_EXIST] = "";
-m_andor_error_maps[DRV_OA_CAMERA_NOT_SUPPORTED] = "";
-m_andor_error_maps[DRV_OA_FAILED_TO_GET_MODE] = "";
+    m_andor_error_maps[DRV_ERROR_CODES] = "DRV_ERROR_CODES";
+    m_andor_error_maps[DRV_SUCCESS] = "DRV_SUCCESS";
+    m_andor_error_maps[DRV_VXDNOTINSTALLED] = "DRV_VXDNOTINSTALLED";
+    m_andor_error_maps[DRV_ERROR_SCAN] = "DRV_ERROR_SCAN";
+    m_andor_error_maps[DRV_ERROR_CHECK_SUM] = "DRV_ERROR_CHECK_SUM";
+    m_andor_error_maps[DRV_ERROR_FILELOAD] = "DRV_ERROR_FILELOAD";
+    m_andor_error_maps[DRV_UNKNOWN_FUNCTION] = "DRV_UNKNOWN_FUNCTION";
+    m_andor_error_maps[DRV_ERROR_VXD_INIT] = "DRV_UNKNOWN_FUNCTION";
+    m_andor_error_maps[DRV_ERROR_ADDRESS] = "DRV_UNKNOWN_FUNCTION";
+    m_andor_error_maps[DRV_ERROR_PAGELOCK] = "DRV_ERROR_PAGELOCK";
+    m_andor_error_maps[DRV_ERROR_PAGEUNLOCK] = "DRV_ERROR_PAGEUNLOCK";
+    m_andor_error_maps[DRV_ERROR_BOARDTEST] = "DRV_ERROR_BOARDTEST";
+    m_andor_error_maps[DRV_ERROR_ACK] = "DRV_ERROR_ACK";
+    m_andor_error_maps[DRV_ERROR_UP_FIFO] = "DRV_ERROR_UP_FIFO";
+    m_andor_error_maps[DRV_ERROR_PATTERN] = "DRV_ERROR_PATTERN";
+    m_andor_error_maps[DRV_KINETIC_TIME_NOT_MET] = "DRV_KINETIC_TIME_NOT_MET";
+    m_andor_error_maps[DRV_ACCUM_TIME_NOT_MET] = "DRV_ACCUM_TIME_NOT_MET";
+    m_andor_error_maps[DRV_NO_NEW_DATA] = "DRV_NO_NEW_DATA";
+    m_andor_error_maps[KERN_MEM_ERROR] = "KERN_MEM_ERROR";
+    m_andor_error_maps[DRV_SPOOLERROR] = "DRV_SPOOLERROR";
+    m_andor_error_maps[DRV_SPOOLSETUPERROR] = "DRV_SPOOLSETUPERROR";
+    m_andor_error_maps[DRV_FILESIZELIMITERROR] = "DRV_FILESIZELIMITERROR";
+    m_andor_error_maps[DRV_ERROR_FILESAVE] = "DRV_ERROR_FILESAVE";
+    m_andor_error_maps[DRV_TEMPERATURE_CODES] = "DRV_TEMPERATURE_CODES";
+    m_andor_error_maps[DRV_TEMPERATURE_OFF] = "DRV_TEMPERATURE_OFF";
+    m_andor_error_maps[DRV_TEMPERATURE_NOT_STABILIZED] = "DRV_TEMPERATURE_NOT_STABILIZED";
+    m_andor_error_maps[DRV_TEMPERATURE_STABILIZED] = "DRV_TEMPERATURE_STABILIZED";
+    m_andor_error_maps[DRV_TEMPERATURE_NOT_REACHED] = "DRV_TEMPERATURE_NOT_REACHED";
+    m_andor_error_maps[DRV_TEMPERATURE_OUT_RANGE] = "DRV_TEMPERATURE_OUT_RANGE";
+    m_andor_error_maps[DRV_TEMPERATURE_NOT_SUPPORTED] = "DRV_TEMPERATURE_NOT_SUPPORTED";
+    m_andor_error_maps[DRV_TEMPERATURE_DRIFT] = "DRV_TEMPERATURE_DRIFT";
+    m_andor_error_maps[DRV_TEMP_CODES] = "DRV_TEMP_CODES";
+    m_andor_error_maps[DRV_TEMP_OFF] = "DRV_TEMP_OFF";
+    m_andor_error_maps[DRV_TEMP_NOT_STABILIZED] = "DRV_TEMP_NOT_STABILIZED";
+    m_andor_error_maps[DRV_TEMP_STABILIZED] = "DRV_TEMP_STABILIZED";
+    m_andor_error_maps[DRV_TEMP_NOT_REACHED] = "DRV_TEMP_NOT_REACHED";
+    m_andor_error_maps[DRV_TEMP_OUT_RANGE] = "DRV_TEMP_OUT_RANGE";
+    m_andor_error_maps[DRV_TEMP_NOT_SUPPORTED] = "DRV_TEMP_NOT_SUPPORTED";
+    m_andor_error_maps[DRV_TEMP_DRIFT] = "DRV_TEMP_DRIFT";
+    m_andor_error_maps[DRV_GENERAL_ERRORS] = "DRV_GENERAL_ERRORS";
+    m_andor_error_maps[DRV_INVALID_AUX] = "DRV_INVALID_AUX";
+    m_andor_error_maps[DRV_COF_NOTLOADED] = "DRV_COF_NOTLOADED";
+    m_andor_error_maps[DRV_FPGAPROG] = "DRV_FPGAPROG";
+    m_andor_error_maps[DRV_FLEXERROR] = "DRV_FLEXERROR";
+    m_andor_error_maps[DRV_GPIBERROR] = "DRV_GPIBERROR";
+    m_andor_error_maps[DRV_EEPROMVERSIONERROR] = "DRV_EEPROMVERSIONERROR";
+    m_andor_error_maps[DRV_DATATYPE] = "DRV_DATATYPE";
+    m_andor_error_maps[DRV_DRIVER_ERRORS] = "DRV_DRIVER_ERRORS";
+    m_andor_error_maps[DRV_P1INVALID] = "DRV_P1INVALID";
+    m_andor_error_maps[DRV_P2INVALID] = "DRV_P2INVALID";
+    m_andor_error_maps[DRV_P3INVALID] = "DRV_P3INVALID";
+    m_andor_error_maps[DRV_P4INVALID] = "DRV_P4INVALID";
+    m_andor_error_maps[DRV_INIERROR] = "DRV_INIERROR";
+    m_andor_error_maps[DRV_COFERROR] = "DRV_COFERROR";
+    m_andor_error_maps[DRV_ACQUIRING] = "DRV_ACQUIRING";
+    m_andor_error_maps[DRV_IDLE] = "DRV_IDLE";
+    m_andor_error_maps[DRV_TEMPCYCLE] = "DRV_TEMPCYCLE";
+    m_andor_error_maps[DRV_NOT_INITIALIZED] = "DRV_NOT_INITIALIZED";
+    m_andor_error_maps[DRV_P5INVALID] = "DRV_P5INVALID";
+    m_andor_error_maps[DRV_P6INVALID] = "DRV_P6INVALID";
+    m_andor_error_maps[DRV_INVALID_MODE] = "DRV_INVALID_MODE";
+    m_andor_error_maps[DRV_INVALID_FILTER] = "DRV_INVALID_FILTER";
+    m_andor_error_maps[DRV_I2CERRORS] = "DRV_I2CERRORS";
+    m_andor_error_maps[DRV_I2CDEVNOTFOUND] = "DRV_I2CDEVNOTFOUND";
+    m_andor_error_maps[DRV_I2CTIMEOUT] = "DRV_I2CTIMEOUT";
+    m_andor_error_maps[DRV_P7INVALID] = "DRV_P7INVALID";
+    m_andor_error_maps[DRV_P8INVALID] = "DRV_P8INVALID";
+    m_andor_error_maps[DRV_P9INVALID] = "DRV_P9INVALID";
+    m_andor_error_maps[DRV_P10INVALID] = "DRV_P10INVALID";
+    m_andor_error_maps[DRV_P11INVALID] = "DRV_P11INVALID";
+    m_andor_error_maps[DRV_USBERROR] = "DRV_USBERROR";
+    m_andor_error_maps[DRV_IOCERROR] = "DRV_IOCERROR";
+    m_andor_error_maps[DRV_VRMVERSIONERROR] = "DRV_VRMVERSIONERROR";
+    m_andor_error_maps[DRV_GATESTEPERROR] = "DRV_GATESTEPERROR";
+    m_andor_error_maps[DRV_USB_INTERRUPT_ENDPOINT_ERROR] = "DRV_USB_INTERRUPT_ENDPOINT_ERROR";
+    m_andor_error_maps[DRV_RANDOM_TRACK_ERROR] = "DRV_RANDOM_TRACK_ERROR";
+    m_andor_error_maps[DRV_INVALID_TRIGGER_MODE] = "DRV_INVALID_TRIGGER_MODE";
+    m_andor_error_maps[DRV_LOAD_FIRMWARE_ERROR] = "DRV_LOAD_FIRMWARE_ERROR";
+    m_andor_error_maps[DRV_DIVIDE_BY_ZERO_ERROR] = "DRV_DIVIDE_BY_ZERO_ERROR";
+    m_andor_error_maps[DRV_INVALID_RINGEXPOSURES] = "DRV_INVALID_RINGEXPOSURES";
+    m_andor_error_maps[DRV_BINNING_ERROR] = "DRV_BINNING_ERROR";
+    m_andor_error_maps[DRV_INVALID_AMPLIFIER] = "DRV_INVALID_AMPLIFIER";
+    m_andor_error_maps[DRV_INVALID_COUNTCONVERT_MODE] = "DRV_INVALID_COUNTCONVERT_MODE";
+    m_andor_error_maps[DRV_NOT_SUPPORTED] = "DRV_NOT_SUPPORTED";
+    m_andor_error_maps[DRV_NOT_AVAILABLE] = "DRV_NOT_AVAILABLE";
+    m_andor_error_maps[DRV_ERROR_MAP] = "DRV_ERROR_MAP";
+    m_andor_error_maps[DRV_ERROR_UNMAP] = "DRV_ERROR_UNMAP";
+    m_andor_error_maps[DRV_ERROR_MDL] = "DRV_ERROR_MDL";
+    m_andor_error_maps[DRV_ERROR_UNMDL] = "DRV_ERROR_UNMDL";
+    m_andor_error_maps[DRV_ERROR_BUFFSIZE] = "DRV_ERROR_BUFFSIZE";
+    m_andor_error_maps[DRV_ERROR_NOHANDLE] = "DRV_ERROR_NOHANDLE";
+    m_andor_error_maps[DRV_GATING_NOT_AVAILABLE] = "DRV_GATING_NOT_AVAILABLE";
+    m_andor_error_maps[DRV_FPGA_VOLTAGE_ERROR] = "DRV_FPGA_VOLTAGE_ERROR";
+    m_andor_error_maps[DRV_OW_CMD_FAIL] = "DRV_OW_CMD_FAIL";
+    m_andor_error_maps[DRV_OWMEMORY_BAD_ADDR] = "DRV_OWMEMORY_BAD_ADDR";
+    m_andor_error_maps[DRV_OWCMD_NOT_AVAILABLE] = "DRV_OWCMD_NOT_AVAILABLE";
+    m_andor_error_maps[DRV_OW_NO_SLAVES] = "DRV_OW_NO_SLAVES";
+    m_andor_error_maps[DRV_OW_NOT_INITIALIZED] = "DRV_OW_NOT_INITIALIZED";
+    m_andor_error_maps[DRV_OW_ERROR_SLAVE_NUM] = "DRV_OW_ERROR_SLAVE_NUM";
+    m_andor_error_maps[DRV_MSTIMINGS_ERROR] = "DRV_MSTIMINGS_ERROR";
+    m_andor_error_maps[DRV_OA_NULL_ERROR] = "DRV_OA_NULL_ERROR";
+    m_andor_error_maps[DRV_OA_PARSE_DTD_ERROR] = "DRV_OA_PARSE_DTD_ERROR";
+    m_andor_error_maps[DRV_OA_DTD_VALIDATE_ERROR] = "DRV_OA_DTD_VALIDATE_ERROR";
+    m_andor_error_maps[DRV_OA_FILE_ACCESS_ERROR] = "DRV_OA_FILE_ACCESS_ERROR";
+    m_andor_error_maps[DRV_OA_FILE_DOES_NOT_EXIST] = "DRV_OA_FILE_DOES_NOT_EXIST";
+    m_andor_error_maps[DRV_OA_XML_INVALID_OR_NOT_FOUND_ERROR] = "DRV_OA_XML_INVALID_OR_NOT_FOUND_ERROR";
+    m_andor_error_maps[DRV_OA_PRESET_FILE_NOT_LOADED] = "DRV_OA_PRESET_FILE_NOT_LOADED";
+    m_andor_error_maps[DRV_OA_USER_FILE_NOT_LOADED] = "DRV_OA_USER_FILE_NOT_LOADED";
+    m_andor_error_maps[DRV_OA_PRESET_AND_USER_FILE_NOT_LOADED] = "DRV_OA_PRESET_AND_USER_FILE_NOT_LOADED";
+    m_andor_error_maps[DRV_OA_INVALID_FILE] = "DRV_OA_INVALID_FILE";
+    m_andor_error_maps[DRV_OA_FILE_HAS_BEEN_MODIFIED] = "DRV_OA_FILE_HAS_BEEN_MODIFIED";
+    m_andor_error_maps[DRV_OA_BUFFER_FULL] = "DRV_OA_BUFFER_FULL";
+    m_andor_error_maps[DRV_OA_INVALID_STRING_LENGTH] = "DRV_OA_INVALID_STRING_LENGTH";
+    m_andor_error_maps[DRV_OA_INVALID_CHARS_IN_NAME] = "DRV_OA_INVALID_CHARS_IN_NAME";
+    m_andor_error_maps[DRV_OA_INVALID_NAMING] = "DRV_OA_INVALID_NAMING";
+    m_andor_error_maps[DRV_OA_GET_CAMERA_ERROR] = "DRV_OA_GET_CAMERA_ERROR";
+    m_andor_error_maps[DRV_OA_MODE_ALREADY_EXISTS] = "DRV_OA_MODE_ALREADY_EXISTS";
+    m_andor_error_maps[DRV_OA_STRINGS_NOT_EQUAL] = "DRV_OA_STRINGS_NOT_EQUAL";
+    m_andor_error_maps[DRV_OA_NO_USER_DATA] = "DRV_OA_NO_USER_DATA";
+    m_andor_error_maps[DRV_OA_VALUE_NOT_SUPPORTED] = "DRV_OA_VALUE_NOT_SUPPORTED";
+    m_andor_error_maps[DRV_OA_MODE_DOES_NOT_EXIST] = "DRV_OA_MODE_DOES_NOT_EXIST";
+    m_andor_error_maps[DRV_OA_CAMERA_NOT_SUPPORTED] = "DRV_OA_CAMERA_NOT_SUPPORTED";
+    m_andor_error_maps[DRV_OA_FAILED_TO_GET_MODE] = "DRV_OA_FAILED_TO_GET_MODE";
 }

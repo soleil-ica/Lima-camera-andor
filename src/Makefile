@@ -1,4 +1,4 @@
-andor-objs = AndorCamera.o AndorInterface.o
+andor-objs = AndorCamera.o AndorInterface.o AndorDetInfoCtrlObj.o AndorSyncCtrlObj.o AndorShutterCtrlObj.o AndorBinCtrlObj.o AndorRoiCtrlObj.o
 
 SRCS = $(andor-objs:.o=.cpp) 
 
