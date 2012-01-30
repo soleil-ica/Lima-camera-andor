@@ -947,7 +947,7 @@ bool Camera::isBinningAvailable()
 //-----------------------------------------------------
 // @brief return the detector pixel size in meter
 //-----------------------------------------------------
-void Camera::getPixelSize(double& size)
+void Camera::getPixelSize(double& x_size,double& y_size)
 {
     DEB_MEMBER_FUNCT();
     float xsize, ysize;
@@ -961,8 +961,9 @@ void Camera::getPixelSize(double& size)
     //Lima will be modified, with a new SizeUtils class for pixel size 
     // today just return x size supposing it the the same for y.
     // remember standard is metric units so size is in meter
-    size = xsize * 1e-6;
-    DEB_RETURN() << DEB_VAR1(size); 
+    x_size = xsize * 1e-6;
+    y_size = ysize * 1e-6;
+    DEB_RETURN() << DEB_VAR1(x_size,y_size); 
 }
 
 
