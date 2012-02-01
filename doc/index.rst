@@ -1,7 +1,7 @@
 Andor
 -------
 
-.. image:: andor.png
+.. image:: ikon-m_934_header.jpg 
 
 Intoduction
 ```````````
@@ -16,9 +16,10 @@ Module configuration
 Previously to this you have to install the Andor SDK the default path (/usr/local).
 For our test we us the SDK for Linux version **V2.91.30001.0** and ran the install script "install_andor"
 for which option 5 (All USB Cameras) was selected, the default installation is made under /usr/local/ with:
-	- /usr/local/include, header files
-	- /usr/local/lib, library files
-	- /usr/local/etc/andor, configuration files
+
+  - /usr/local/include, header files
+  - /usr/local/lib, library files
+  - /usr/local/etc/andor, configuration files
 
 The Linux SSK 2.91 has shared libraries which has been compiled on recent linux kernel, check first you have the right kernel and
 libc available by compiling one of the example program available under examples/console.
@@ -56,6 +57,6 @@ Installation
 - And probably Tango server :ref:`tango_installation`
 
 Configuration
-´´´´´´´´´´´´´
+`````````````
 
- - Plug our USB camera 
+ - Plug your USB camera  on any USB port of the computer, that's all !!!
