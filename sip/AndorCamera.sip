@@ -64,7 +64,7 @@ namespace Andor
     void setShutterMode(ShutterMode mode);
     void getShutterMode(ShutterMode& mode /Out/);
 
-    void getPixelSize(double& /Out/, double& /Out/);
+    void getPixelSize(double& xsize /Out/, double& ysize /Out/);
 
     void getStatus(Andor::Camera::Status& status /Out/);
 
