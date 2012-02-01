@@ -91,10 +91,10 @@ void DetInfoCtrlObj::setCurrImageType(ImageType image_type)
 //-----------------------------------------------------
 // @brief
 //-----------------------------------------------------
-void DetInfoCtrlObj::getPixelSize(double& size)
+void DetInfoCtrlObj::getPixelSize(double& xsize, double& ysize)
 {
     DEB_MEMBER_FUNCT();
-    m_cam.getPixelSize(size);
+    m_cam.getPixelSize(xsize, ysize);
 }
 
 //-----------------------------------------------------

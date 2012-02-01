@@ -116,7 +116,7 @@ namespace lima
 	    void getShutterMode(ShutterMode& mode);
     
 
-	    void getPixelSize(double&);
+	    void getPixelSize(double& sizex, double& sizey);
     
 	    void getStatus(Camera::Status& status);
     
@@ -137,6 +137,7 @@ namespace lima
 	    void setShutterLevel(int level);
 	    void getShutterLevel(int& level);
 	    void setTemperatureSP(int temp);
+	    void getTemperatureSP(int& temp);
 	    void getTemperature(int& temp);
 	    void setCooler(bool flag);
 	    void getCooler(bool& flag);

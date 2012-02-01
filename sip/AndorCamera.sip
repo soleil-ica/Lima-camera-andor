@@ -64,7 +64,7 @@ namespace Andor
     void setShutterMode(ShutterMode mode);
     void getShutterMode(ShutterMode& mode /Out/);
 
-    void getPixelSize(double& /Out/);
+    void getPixelSize(double& /Out/, double& /Out/);
 
     void getStatus(Andor::Camera::Status& status /Out/);
 
@@ -80,6 +80,7 @@ namespace Andor
     void setShutterLevel(int level);
     void getShutterLevel(int& level /Out/);
     void setTemperatureSP(int temp);
+    void getTemperatureSP(int& temp);
     void getTemperature(int& temp /Out/);
     void setCooler(bool flag);
     void getCooler(bool& flag /Out/);

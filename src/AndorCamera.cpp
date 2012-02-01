@@ -77,6 +77,7 @@ Camera::Camera(const std::string& config_path,int camera_number)
       m_shutter_level(0),
       m_shutter_close_time(0),
       m_shutter_open_time(0),
+      m_temperature_sp(0),
       m_exp_time(1.)
 {
     DEB_CONSTRUCTOR();
@@ -823,25 +824,43 @@ void Camera::setRoi(const Roi& set_roi)
     DEB_PARAM() << DEB_VAR1(set_roi);
 
     Point topleft, size;
+    int binx, biny;
     int hstart, hend, vstart, vend;
-    Roi hw_roi;
+    Roi hw_roi, roiMax;
+    Size sizeMax;
+    
+    getDetectorImageSize(sizeMax);
+    roiMax = Roi(0,0, sizeMax.getWidth(), sizeMax.getHeight());    
+
+    // --- Warning, SetImage() needs coodinates in full image size not with binning
+    // --- but Lima passes image size with binning applied on
+    // --- so set a internal binning factor (binx/biny) for size correction.
 
     if(m_roi == set_roi) return;    
                
-    if(set_roi.isActive()) hw_roi = set_roi;
+    if(set_roi.isActive() && set_roi != roiMax)
+    {
+	// --- a real roi available
+	hw_roi = set_roi;
+	binx = m_bin.getX(); biny = m_bin.getY();    	
+    }
     else
     {
-        // ROI has been reset (0x0)
-        // --- read back full frame size
-        Size sizeMax;
-        getDetectorImageSize(sizeMax);
-        hw_roi = Roi(0,0, sizeMax.getWidth(), sizeMax.getHeight());    
+	// ---  either No roi or roi fit with max size!!!	
+	// --- in that case binning for full size calculation is 1
+	hw_roi = roiMax;
+	binx=1; biny=1;
     }    
     // --- Andor sets the ROI by starting coordinates at 1 and not 0 !!!!
+    // --- Warning, SetImage() needs coodinates in full image size not with binning
+    // --- but Lima passes here image size with binning applied on
+
     topleft = hw_roi.getTopLeft(); size = hw_roi.getSize();
-    hstart = topleft.x +1;          vstart = topleft.y +1;
-    hend   = hstart + size.x -1;      vend   = vstart + size.y -1;
-            
+    hstart = topleft.x*binx +1;          vstart = topleft.y*biny +1;
+    hend   = hstart + size.x*binx -1;    vend   = vstart + size.y*biny -1;
+    
+    DEB_TRACE() << "bin =  " << m_bin.getX() <<"x"<< m_bin.getY();
+    DEB_TRACE() << "roi = " << hstart << "-" << hend << ", " << vstart << "-" << vend;
     //- then fix the new ROI
     if (andorError(SetImage(m_bin.getX(), m_bin.getY(), hstart, hend, vstart, vend)))
     {
@@ -891,23 +910,39 @@ void Camera::setBin(const Bin &set_bin)
     DEB_MEMBER_FUNCT();
     Point topleft, size;
     
+    int binx, biny;
     int hstart, hend, vstart, vend;
+    Roi hw_roi, roiMax;
+    Size sizeMax;
+
+    getDetectorImageSize(sizeMax);
+    roiMax = Roi(0,0, sizeMax.getWidth(), sizeMax.getHeight());
 
     if(m_bin == set_bin) return;
+
+    // --- Warning, SetImage() needs coodinates in full image size not with binning
+    // --- but Lima passes image size with binning applied on
+    // --- so set a internal binning factor (binx/biny) for size correction.
                
-    if(m_roi.isActive())
+    if(m_roi.isActive() && m_roi != roiMax) 
     {
-        topleft = m_roi.getTopLeft(); size = m_roi.getSize();
-        hstart = topleft.x+1;          vstart = topleft.y+1;
-        hend   = hstart + size.x -1;      vend   = vstart + size.y -1;
-        //- then fix the new BIN
+	// --- a real available
+	binx = set_bin.getX();  biny = set_bin.getY();
+	hw_roi = m_roi;
     }
     else
-    {   Size size;
-        getDetectorImageSize(size);
-        hstart = 1; vstart = 1;
-        hend = size.getHeight(); vend = size.getWidth();
+    {
+	// ---  either No roi or roi fit with max size!!!	
+	// --- in that case binning for full size calculation is 1
+	hw_roi = roiMax;
+	binx = 1; biny = 1;
     }
+    topleft = hw_roi.getTopLeft(); size = hw_roi.getSize();
+    hstart = topleft.x*binx +1;          vstart = topleft.y*biny +1;
+    hend   = hstart + size.x*binx -1;    vend   = vstart + size.y*biny -1;
+
+    DEB_TRACE() << "bin =  " << set_bin.getX() <<"x"<< set_bin.getY();
+    DEB_TRACE() << "roi = " << hstart << "-" << hend << ", " << vstart << "-" << vend;
     if (andorError(SetImage(set_bin.getX(), set_bin.getY(), hstart, hend, vstart, vend)))
     {
         DEB_ERROR() << "Cannot set detector BIN" << " : error code = " << m_camera_error_str;
@@ -947,7 +982,7 @@ bool Camera::isBinningAvailable()
 //-----------------------------------------------------
 // @brief return the detector pixel size in meter
 //-----------------------------------------------------
-void Camera::getPixelSize(double& size)
+void Camera::getPixelSize(double& sizex, double& sizey)
 {
     DEB_MEMBER_FUNCT();
     float xsize, ysize;
@@ -957,12 +992,9 @@ void Camera::getPixelSize(double& size)
         DEB_ERROR() << "Cannot pixel sizes" << " : error code = " << m_camera_error_str;
         THROW_HW_ERROR(Error) << "Cannot get pixel size";                                        
     }
-    //-- what to do with x and y size when lima on support only one size
-    //Lima will be modified, with a new SizeUtils class for pixel size 
-    // today just return x size supposing it the the same for y.
-    // remember standard is metric units so size is in meter
-    size = xsize * 1e-6;
-    DEB_RETURN() << DEB_VAR1(size); 
+    sizex = xsize * 1e-6;
+    sizey = ysize * 1e-6;
+    DEB_RETURN() << DEB_VAR2(sizex, sizey); 
 }
 
 
@@ -1455,6 +1487,17 @@ void Camera::setTemperatureSP(int temp)
         THROW_HW_ERROR(Error) << "Failed to set temperature set-point";          
     }
     m_temperature_sp = temp;
+}
+
+//-----------------------------------------------------
+// @brief	return the temperature set-point
+// @param	temperature in centigrade
+//
+//-----------------------------------------------------
+void Camera::getTemperatureSP(int& temp)
+{
+    DEB_MEMBER_FUNCT();
+    temp = m_temperature_sp;
 }
 
 

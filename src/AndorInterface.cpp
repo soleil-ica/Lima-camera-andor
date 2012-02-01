@@ -27,8 +27,6 @@ using namespace lima::Andor;
 using namespace std;
 
 
-
-
 //-----------------------------------------------------
 // @brief Ctor
 //-----------------------------------------------------
@@ -60,7 +58,7 @@ Interface::Interface(Camera& cam)
 }
 
 //-----------------------------------------------------
-//
+// @brief Dtor
 //-----------------------------------------------------
 Interface::~Interface()
 {
@@ -68,7 +66,7 @@ Interface::~Interface()
 }
 
 //-----------------------------------------------------
-//
+// @brief return the capability list
 //-----------------------------------------------------
 void Interface::getCapList(HwInterface::CapList &cap_list) const
 {
@@ -77,7 +75,7 @@ void Interface::getCapList(HwInterface::CapList &cap_list) const
 }
 
 //-----------------------------------------------------
-//
+// @brief reset the interface, stop the acqisition
 //-----------------------------------------------------
 void Interface::reset(ResetLevel reset_level)
 {
@@ -90,7 +88,7 @@ void Interface::reset(ResetLevel reset_level)
 }
 
 //-----------------------------------------------------
-//
+// @brief do nothing
 //-----------------------------------------------------
 void Interface::prepareAcq()
 {
@@ -98,7 +96,7 @@ void Interface::prepareAcq()
 }
 
 //-----------------------------------------------------
-//
+// @brief start the camera acquisition
 //-----------------------------------------------------
 void Interface::startAcq()
 {
@@ -107,7 +105,7 @@ void Interface::startAcq()
 }
 
 //-----------------------------------------------------
-//
+// @brief stop the camera acquisition
 //-----------------------------------------------------
 void Interface::stopAcq()
 {
@@ -116,7 +114,7 @@ void Interface::stopAcq()
 }
 
 //-----------------------------------------------------
-//
+// @brief return the status of detector/acquisition
 //-----------------------------------------------------
 void Interface::getStatus(StatusType& status)
 {
@@ -152,7 +150,7 @@ void Interface::getStatus(StatusType& status)
 }
 
 //-----------------------------------------------------
-//
+// @brief return the hw number of acquired frames
 //-----------------------------------------------------
 int Interface::getNbHwAcquiredFrames()
 {
@@ -161,7 +159,6 @@ int Interface::getNbHwAcquiredFrames()
      m_cam.getNbHwAcquiredFrames(acq_frames);
      return acq_frames;
 }
-
 
 
 //-----------------------------------------------------
