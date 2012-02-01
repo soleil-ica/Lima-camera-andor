@@ -13,9 +13,19 @@ The Lima module as been tested only with this cameras models:
 
 Module configuration
 ````````````````````
-Previously to this you have to install the Andor SDK the default path (/usrlocal)
+Previously to this you have to install the Andor SDK the default path (/usr/local).
+For our test we us the SDK for Linux version **V2.91.30001.0** and ran the install script "install_andor"
+for which option 5 (All USB Cameras) was selected, the default installation is made under /usr/local/ with:
+	- /usr/local/include, header files
+	- /usr/local/lib, library files
+	- /usr/local/etc/andor, configuration files
 
+The Linux SSK 2.91 has shared libraries which has been compiled on recent linux kernel, check first you have the right kernel and
+libc available by compiling one of the example program available under examples/console.
 Andor python module needs at least the lima core module.
+
+For the USB camera the SDK is using the libusb under linux, check first your system is equiped with the libusb package otherwise you
+will not compile the Andor Lima plugin.
 
 The minimum configuration file is *config.inc* :
 
@@ -45,8 +55,7 @@ Installation
 
 - And probably Tango server :ref:`tango_installation`
 
-
 Configuration
-``````````````
- - blabla
- - blabla
+´´´´´´´´´´´´´
+
+ - Plug our USB camera 
