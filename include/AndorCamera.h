@@ -77,7 +77,7 @@ namespace lima
 	    void getDetectorImageSize(Size& size);
     
 	    // -- Buffer control object
-	    HwBufferCtrlObj* getBufferMgr();
+	    HwBufferCtrlObj* getBufferCtrlObj();
     
 	    //-- Synch control object
 	    bool checkTrigMode(TrigMode trig_mode);
@@ -156,7 +156,7 @@ namespace lima
 	    Cond                        m_cond;
 
 	    //- lima stuff
-	    SoftBufferCtrlMgr		    m_buffer_ctrl_mgr;
+	    SoftBufferCtrlObj	        m_buffer_ctrl_obj;
 	    int                         m_nb_frames;    
 	    Camera::Status              m_status;
 	    volatile bool               m_wait_flag;

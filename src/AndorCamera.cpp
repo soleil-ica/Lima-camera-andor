@@ -309,7 +309,7 @@ void Camera::startAcq()
     while(!m_thread_running)
         m_cond.wait();
         
-    StdBufferCbMgr& buffer_mgr = m_buffer_ctrl_mgr.getBuffer();
+    StdBufferCbMgr& buffer_mgr = m_buffer_ctrl_obj.getBuffer();
     buffer_mgr.setStartTimestamp(Timestamp::now());
     if (andorError(StartAcquisition()))
     {
@@ -338,6 +338,7 @@ void Camera::_stopAcq(bool internalFlag)
     {
         while(!internalFlag && m_thread_running)
         {
+	    // signal the acq. thread to stop acquiring and to return the wait state
             m_wait_flag = true;
             m_cond.wait();
         }
@@ -363,7 +364,7 @@ void Camera::_AcqThread::threadFunction()
 {
     DEB_MEMBER_FUNCT();
     AutoMutex aLock(m_cam.m_cond.mutex());
-    StdBufferCbMgr& buffer_mgr = m_cam.m_buffer_ctrl_mgr.getBuffer();
+    StdBufferCbMgr& buffer_mgr = m_cam.m_buffer_ctrl_obj.getBuffer();
 
     while(!m_cam.m_quit)
     {
@@ -385,6 +386,12 @@ void Camera::_AcqThread::threadFunction()
         bool continueAcq = true;
         while(continueAcq && (!m_cam.m_nb_frames || m_cam.m_image_number < m_cam.m_nb_frames))
         {
+	    // Check first if acq. has been stopped
+	    if (m_cam.m_wait_flag) 
+	    {
+		continueAcq = false;
+		continue;
+	    }
             // --- Get the available images in cicular buffer            
             int first, last;
             if (m_cam.andorError(GetNumberNewImages(&first, &last)))
@@ -538,10 +545,10 @@ void Camera::getDetectorModel(string& type)
 //-----------------------------------------------------
 // @brief return the internal buffer manager
 //-----------------------------------------------------
-HwBufferCtrlObj* Camera::getBufferMgr()
+HwBufferCtrlObj* Camera::getBufferCtrlObj()
 {
     DEB_MEMBER_FUNCT();
-    return &m_buffer_ctrl_mgr;
+    return &m_buffer_ctrl_obj;
 }
 
 
@@ -595,8 +602,8 @@ void Camera::setTrigMode(TrigMode mode)
 
     if (andorError(SetTriggerMode(m_trig_mode_maps[mode])))
     {
-        DEB_ERROR() << "Cannot get detector size" << " : error code = " << m_camera_error_str;
-        THROW_HW_ERROR(Error) << "Cannot get detector size";                    
+        DEB_ERROR() << "Cannot set trigger mode" << " : error code = " << m_camera_error_str;
+        THROW_HW_ERROR(Error) << "Cannot set trigger mode";                    
     }
     m_trig_mode = mode;    
 }
