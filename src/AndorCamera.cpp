@@ -316,6 +316,24 @@ void Camera::startAcq()
         DEB_ERROR() << "Cannot start acquisition" << " : error code = " << m_camera_error_str;
         THROW_HW_ERROR(Error) << "Cannot start acquisition";            
     }
+    // in external mode even with FastExtTrigger enabled the camera can not grab the trigger
+    // within a too short delay, 100ms is the minimum required, very slow camera !!!
+    // and unfortunately the status is not reflecting this lack of synchro.
+    //while(1)
+    //{
+    //    if (andorError(GetStatus(&status)))
+    //    {
+    //        DEB_ERROR() << "Cannot get status" << " : error code = " << m_camera_error_str;
+    //        THROW_HW_ERROR(Error) << "Cannot get status";            
+    //    }
+    //    if (status== DRV_ACQUIRING) break;
+    //    usleep(1e3); 
+    //}
+    if (m_trig_mode != IntTrig && m_trig_mode != IntTrigMult)
+    {
+        usleep(1e5);
+    }
+
 }
 
 //---------------------------
@@ -340,6 +358,13 @@ void Camera::_stopAcq(bool internalFlag)
         {
 	    // signal the acq. thread to stop acquiring and to return the wait state
             m_wait_flag = true;
+
+	    // Thread is maybe waiting for the Andor acq. event
+	    if (andorError(CancelWait()))
+	    {
+		DEB_ERROR() << "CancelWait() failed" << " : error code = " << m_camera_error_str;
+		THROW_HW_ERROR(Error) << "CancelWait() failed";
+	    }
             m_cond.wait();
         }
 	aLock.unlock();
@@ -353,7 +378,7 @@ void Camera::_stopAcq(bool internalFlag)
         {
             DEB_ERROR() << "Cannot abort acquisition" << " : error code = " << m_camera_error_str;
             THROW_HW_ERROR(Error) << "Cannot abort acquisition";
-        }
+        }	
         _setStatus(Camera::Ready,false);    
     }
 }
@@ -384,6 +409,13 @@ void Camera::_AcqThread::threadFunction()
         aLock.unlock();
 
         bool continueAcq = true;
+	
+	int first = 0, last = 0, prev_last = 0;
+	FrameDim frame_dim = buffer_mgr.getFrameDim();
+	Size  frame_size = frame_dim.getSize();
+	int size = frame_size.getWidth() * frame_size.getHeight();
+	int validfirst, validlast;
+
         while(continueAcq && (!m_cam.m_nb_frames || m_cam.m_image_number < m_cam.m_nb_frames))
         {
 	    // Check first if acq. has been stopped
@@ -392,8 +424,21 @@ void Camera::_AcqThread::threadFunction()
 		continueAcq = false;
 		continue;
 	    }
+	    // Wait for an "acquisition" event, and use less cpu resources, in kinetic mode (multiframe)
+            // an event is generated for each new image
+	    if(m_cam.andorError(WaitForAcquisition()))
+	    {
+		// If CancelWait() or acq. not started yet
+		if(m_cam.m_camera_error == DRV_NO_NEW_DATA) continue;
+		else 
+		{
+		    DEB_ERROR() << "WaitForAcquisition() failed" << " : error code = " << m_cam.m_camera_error_str;
+		    THROW_HW_ERROR(Error) << "WaitForAcquisition() failed";
+		}
+	    }
+
             // --- Get the available images in cicular buffer            
-            int first, last;
+            prev_last = last;
             if (m_cam.andorError(GetNumberNewImages(&first, &last)))
             {
                 if (m_cam.m_camera_error == DRV_NO_NEW_DATA) continue;
@@ -404,15 +449,17 @@ void Camera::_AcqThread::threadFunction()
                 }
             }        
             DEB_TRACE() << "Available images: first = " << first << " last = " << last;
-             
+            // Check if we lose an image
+	    if(first != prev_last +1 )
+	    {
+		m_cam._setStatus(Camera::Fault,false);
+		continueAcq = false;
+		DEB_ERROR() << "Lost image(s) from " << prev_last << "to "<< first-1;
+		THROW_HW_ERROR(Error) << "Lost image(s) from " << prev_last << "to "<< first-1;	
+	    }
             // --- Images are available, process images
             m_cam._setStatus(Camera::Readout,false);
- 
-            FrameDim frame_dim = buffer_mgr.getFrameDim();
-            Size  frame_size = frame_dim.getSize();
-            int size = frame_size.getWidth() * frame_size.getHeight();
-            int validfirst, validlast;
-            
+             
             for (long im=first; im <= last; im++)
             {
                 DEB_TRACE()  << "image #" << m_cam.m_image_number <<" acquired !";
