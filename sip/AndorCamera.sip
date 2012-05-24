@@ -18,6 +18,44 @@ namespace Andor
       MANUAL
     };
 
+    enum SpoolingMethod
+    {
+        SM_SEQ_INT32 = 0,
+        SM_ACCUMULATION_DEPENDEND,
+        SM_SEQ_INT16,
+        SM_MULTI_DIRS,
+        SM_RAM,
+        SM_16BIT_FITS,
+        SM_SIF,
+        SM_16BIT_TIFF,
+        SM_MULTI_DIRS_COMP
+    };
+
+    enum HighCapacityMode
+    {
+        HIGH_SENSITIVITY = 0,
+        HIGH_CAPACITY
+    };
+
+    enum GateMode
+    {
+       FIRE_ANDED_WITH_GATE = 0,
+       FIRE_ONLY,
+       SMB_GATE_ONLY,
+       GATING_ON,
+       GATING_OFF,
+       DDG
+    };
+
+    enum ReadMode
+    {
+        FULL_VERTICAL_BINNING = 0,
+        MULTI_TRACK,
+        RANDOM_TRACK,
+        SINGLE_TRACK,
+        IMAGE
+    };
+
     Camera(const std::string& config_path,int camera_number=0);
     ~Camera();
 
@@ -85,6 +123,11 @@ namespace Andor
     void setCooler(bool flag);
     void getCooler(bool& flag /Out/);
     void getCoolingStatus(std::string& status /Out/);
+    void setSpooling(bool flag, SpoolingMethod method, std::string path, int frameBufferSize);
+    void setHighCapacity(HighCapacityMode mode);
+    void setGateMode(GateMode mode);
+    void setReadMode(ReadMode mode);
+    
   };
 
 };

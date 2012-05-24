@@ -1648,6 +1648,77 @@ void Camera::getCoolingStatus(std::string& status)
     }    
 }
 
+ //-----------------------------------------------------
+// @brief	Sets spooling specific parameters
+// @param	flag            enable/disable spooling
+// @param   method          used spooling method
+// @param   path            spooling dir/file
+// @param   framBufferSize  size of the internal circular buffer
+//
+//-----------------------------------------------------
+void Camera::setSpooling(bool flag, SpoolingMethod method, string path, int frameBufferSize)
+{
+    DEB_MEMBER_FUNCT();
+
+    int intFlag = flag;
+    int intMethod = method;
+
+    if(andorError(SetSpool(intFlag,intMethod,const_cast<char*>(path.c_str()),frameBufferSize)))
+    {
+        DEB_ERROR() << "Error while configuring spooling" <<" : error code = " << m_camera_error_str;
+        THROW_HW_ERROR(Error) << "Failed to configure spooling";
+    }
+}
+
+
+//-----------------------------------------------------
+// @brief	Sets the High capacity mode
+// @param	mode    mode to set
+//
+//-----------------------------------------------------
+void Camera::setHighCapacity(HighCapacityMode mode)
+{
+    DEB_MEMBER_FUNCT();
+
+    if(andorError(SetHighCapacity((int) mode)))
+    {
+        DEB_ERROR() << "Error while setting high capacity mode" <<" : error code = " << m_camera_error_str;
+        THROW_HW_ERROR(Error) << "Failed to set high capacity mode";
+    }
+}
+
+//-----------------------------------------------------
+// @brief	Sets the gate mode
+// @param	mode    mode to set
+//
+//-----------------------------------------------------
+void Camera::setGateMode(GateMode mode)
+{
+    DEB_MEMBER_FUNCT();
+
+    if(andorError(SetGateMode((int) mode)))
+    {
+        DEB_ERROR() << "Error while setting gate mode" <<" : error code = " << m_camera_error_str;
+        THROW_HW_ERROR(Error) << "Failed to set gate mode";
+    }
+}
+
+//-----------------------------------------------------
+// @brief	Sets the read mode
+// @param	mode    mode to set
+//
+//-----------------------------------------------------
+void Camera::setReadMode(ReadMode mode)
+{
+    DEB_MEMBER_FUNCT();
+
+    if(andorError(SetReadMode((int) mode)))
+    {
+        DEB_ERROR() << "Error while setting read mode" <<" : error code = " << m_camera_error_str;
+        THROW_HW_ERROR(Error) << "Failed to set read mode";
+    }
+}
+
 //-----------------------------------------------------
 // @brief handle the andor error codes
 //-----------------------------------------------------
