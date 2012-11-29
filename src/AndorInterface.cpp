@@ -149,6 +149,7 @@ void Interface::getStatus(StatusType& status)
     DEB_RETURN() << DEB_VAR1(status);
 }
 
+
 //-----------------------------------------------------
 // @brief return the hw number of acquired frames
 //-----------------------------------------------------
@@ -160,6 +161,206 @@ int Interface::getNbHwAcquiredFrames()
      return acq_frames;
 }
 
+/////////////////////////////////////////////////////////////
+// HERE we just map setter/getter methods of the AndorCamera 
+// class for a public access, stupid but useful !!
+// one could merge AndorCamera and AndorInterface, ok next 
+// release.
+/////////////////////////////////////////////////////////////
+
+//-----------------------------------------------------
+// @brief	set ADC/Speed settings
+// @param	adc pais adc/speed index (if =-1, set to max speed)
+//
+//-----------------------------------------------------
+void Interface::setAdcSpeed(int adc)
+{
+    m_cam.setAdcSpeed(adc);
+}
+
+//-----------------------------------------------------
+// @brief	get ADC/Speed settings
+// @param	adc index
+//
+//-----------------------------------------------------
+void Interface::getAdcSpeed(int& adc)
+{
+    m_cam.getAdcSpeed(adc);
+}
+
+//-----------------------------------------------------
+// @brief	set Vertical Shift Speed
+// @param	vss index (if =-1, set to recommended)
+//
+//-----------------------------------------------------
+void Interface::setVsSpeed(int vss)
+{
+    m_cam.setVsSpeed(vss);
+}
+
+//-----------------------------------------------------
+// @brief	get Vertical Shift Speed
+// @param	vss index
+//
+//-----------------------------------------------------
+void Interface::getVsSpeed(int& vss)
+{
+    m_cam.getVsSpeed(vss);
+}
+
+//-----------------------------------------------------
+// @brief	set Preamp Gain
+// @param	gain premap gain index
+//
+//-----------------------------------------------------
+void Interface::setPGain(int gain) 
+{
+    m_cam.setPGain(gain);
+}
+
+//-----------------------------------------------------
+// @brief	get Preamp Gain
+// @param	gain premap gain index
+//
+//-----------------------------------------------------
+void Interface::getPGain(int& gain) 
+{
+    m_cam.getPGain(gain);
+}
+
+//-----------------------------------------------------
+// @brief	set external trigger for fast mode
+// @param	flag fast or not (boolean)
+//
+//-----------------------------------------------------
+void Interface::setFastExtTrigger(bool flag)
+{
+    m_cam.setFastExtTrigger(flag);
+}
+
+//-----------------------------------------------------
+// @brief	get external fast trigger mode
+// @param	flag fast or not (boolean)
+//
+//-----------------------------------------------------
+void Interface::getFastExtTrigger(bool& flag)
+{
+    m_cam.getFastExtTrigger(flag);
+}
+
+//-----------------------------------------------------
+// @brief	set the shutter output level
+// @param	level 0 or 1
+//
+//-----------------------------------------------------
+void Interface::setShutterLevel(int level)
+{
+    m_cam.setShutterLevel(level);
+}
+
+//-----------------------------------------------------
+// @brief	get the shutter output level
+// @param	level 0 or 1
+//
+//-----------------------------------------------------
+void Interface::getShutterLevel(int& level)
+{
+    m_cam.getShutterLevel(level);
+}
+
+//-----------------------------------------------------
+// @brief	set the temperature set-point
+// @param	temperature in centigrade
+//
+//-----------------------------------------------------
+void Interface::setTemperatureSP(int temp)
+{
+    m_cam.setTemperatureSP(temp);
+}
+
+//-----------------------------------------------------
+// @brief	return the temperature set-point
+// @param	temperature in centigrade
+//
+//-----------------------------------------------------
+void Interface::getTemperatureSP(int& temp)
+{
+    m_cam.getTemperatureSP(temp);
+}
+
+
+//-----------------------------------------------------
+// @brief	Gets the real temperature of the detector sensor 
+// @param	temp temperature in centigrade
+//
+//-----------------------------------------------------
+void Interface::getTemperature(int& temp)
+{
+    m_cam.getTemperature(temp);
+}
+
+//-----------------------------------------------------
+// @brief	start or Stop the cooler 
+// @param	flag true-on, false-off
+//
+//-----------------------------------------------------
+void Interface::setCooler(bool flag)
+{
+    m_cam.setCooler(flag);
+}
+//-----------------------------------------------------
+// @brief	Get the Cooler status  
+// @param	flag true-on, false-off
+//
+//-----------------------------------------------------
+void Interface::getCooler(bool& flag)
+{
+    m_cam.getCooler(flag);
+}
+
+//-----------------------------------------------------
+// @brief	Gets cooling status
+// @param	status status as a string
+//
+//-----------------------------------------------------
+void Interface::getCoolingStatus(std::string& status)   
+{
+    m_cam.getCoolingStatus(status);
+}
+
+ //-----------------------------------------------------
+// @brief	Sets spooling specific parameters
+// @param	flag            enable/disable spooling
+// @param   method          used spooling method
+// @param   path            spooling dir/file
+// @param   framBufferSize  size of the internal circular buffer
+//
+//-----------------------------------------------------
+void Interface::setSpooling(bool flag, SpoolingMethod method, string path, int frameBufferSize)
+{
+    m_cam.setSpooling(flag, method, path, frameBufferSize);
+}
+
+
+//-----------------------------------------------------
+// @brief	Sets the High capacity mode
+// @param	mode    mode to set
+//
+//-----------------------------------------------------
+void Interface::setHighCapacity(HighCapacityMode mode)
+{
+    m_cam.setHighCapacity(mode);
+}
+
+//-----------------------------------------------------
+// @brief	Sets the gate mode
+// @param	mode    mode to set
+//
+//-----------------------------------------------------
+void Interface::setGateMode(GateMode mode)
+{
+    m_cam.setGateMode(mode);
+}
 
 //-----------------------------------------------------
 //-----------------------------------------------------

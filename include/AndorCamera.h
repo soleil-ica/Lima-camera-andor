@@ -74,25 +74,7 @@ namespace lima
 {
     namespace Andor
     {
-/*******************************************************************
- * \class Camera
- * \brief object controlling the andor camera via Pylon driver
- *******************************************************************/
-	class Camera
-	{
-	    DEB_CLASS_NAMESPC(DebModCamera, "Camera", "Andor");
-	    friend class Interface;
-	public:
 
-	    enum Status {
-		Ready, Exposure, Readout, Latency, Fault
-	    };
-
-	    enum ShutterMode {
-		FRAME,
-		MANUAL
-	    };
-    
         enum SpoolingMethod
         {
             SM_SEQ_INT32 = 0,
@@ -130,6 +112,26 @@ namespace lima
             SINGLE_TRACK,
             IMAGE
         };
+
+/*******************************************************************
+ * \class Camera
+ * \brief object controlling the andor camera via Pylon driver
+ *******************************************************************/
+	class Camera
+	{
+	    DEB_CLASS_NAMESPC(DebModCamera, "Camera", "Andor");
+	    friend class Interface;
+	public:
+
+	    enum Status {
+		Ready, Exposure, Readout, Latency, Fault
+	    };
+
+	    enum ShutterMode {
+		FRAME,
+		MANUAL
+	    };
+    
     
 	    Camera(const std::string& config_path,int camera_number=0);
 	    ~Camera();
@@ -191,16 +193,19 @@ namespace lima
     
 	    void reset();
 
-	    // -- andor specific, LIMA don't worry about it !        
+	    // -- andor specific
 	    void _mapAndorError();
 	    bool andorError(unsigned int code);
 	    void initialiseController();
 	    void initAdcSpeed();
 	    void setAdcSpeed(int adc);
-	    void initVSS();
-	    void setVSS(int vss);
+	    void getAdcSpeed(int& adc);
+	    void initVsSpeed();
+	    void setVsSpeed(int vss);
+	    void getVsSpeed(int& vss);
 	    void initPGain();
 	    void setPGain(int gain);
+	    void getPGain(int& gain);
 	    void setFastExtTrigger(bool flag);
 	    void getFastExtTrigger(bool& flag);
 	    void setShutterLevel(int level);
@@ -214,7 +219,7 @@ namespace lima
 	    void setSpooling(bool flag, SpoolingMethod method, std::string path, int frameBufferSize);
 	    void setHighCapacity(HighCapacityMode mode);
 	    void setGateMode(GateMode mode);
-	    void setReadMode(ReadMode mode);
+	    //void setReadMode(ReadMode mode);
     
     
     
