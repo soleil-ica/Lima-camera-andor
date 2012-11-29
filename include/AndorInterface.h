@@ -30,12 +30,12 @@
 #include "AndorBinCtrlObj.h"
 #include "AndorRoiCtrlObj.h"
 
+
 namespace lima
 {
     namespace Andor
     {
 	class Interface;
-
 
 /*******************************************************************
  * \class Interface
@@ -58,6 +58,27 @@ namespace lima
 	    virtual void    stopAcq();
 	    virtual void    getStatus(StatusType& status);
 	    virtual int     getNbHwAcquiredFrames();
+
+	    // - From AndorCamera
+	    void setAdcSpeed(int adc);
+	    void getAdcSpeed(int& adc);
+	    void setVsSpeed(int vss);
+	    void getVsSpeed(int& vss);
+	    void setPGain(int gain);
+	    void getPGain(int& gain);
+	    void setFastExtTrigger(bool flag);
+	    void getFastExtTrigger(bool& flag);
+	    void setShutterLevel(int level);
+	    void getShutterLevel(int& level);
+	    void setTemperatureSP(int temp);
+	    void getTemperatureSP(int& temp);
+	    void getTemperature(int& temp);
+	    void setCooler(bool flag);
+	    void getCooler(bool& flag);
+	    void getCoolingStatus(std::string& status);    
+	    void setSpooling(bool flag, SpoolingMethod method, std::string path, int frameBufferSize);
+	    void setHighCapacity(HighCapacityMode mode);
+	    void setGateMode(GateMode mode);
 
 	private:
 	    Camera&         m_cam;

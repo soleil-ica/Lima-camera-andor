@@ -1,23 +1,9 @@
 
 namespace Andor
 {
-  class Camera
-  {
 %TypeHeaderCode
 #include <AndorCamera.h>
 %End
-
-  public:
-
-    enum Status {
-      Ready, Exposure, Readout, Latency, Fault
-    };
-
-    enum ShutterMode{
-      FRAME,
-      MANUAL
-    };
-
     enum SpoolingMethod
     {
         SM_SEQ_INT32 = 0,
@@ -55,6 +41,24 @@ namespace Andor
         SINGLE_TRACK,
         IMAGE
     };
+
+  class Camera
+  {
+%TypeHeaderCode
+#include <AndorCamera.h>
+%End
+
+  public:
+
+    enum Status {
+      Ready, Exposure, Readout, Latency, Fault
+    };
+
+    enum ShutterMode{
+      FRAME,
+      MANUAL
+    };
+
 
     Camera(const std::string& config_path,int camera_number=0);
     ~Camera();
@@ -109,10 +113,13 @@ namespace Andor
     void initialiseController();
     void initAdcSpeed();
     void setAdcSpeed(int adc);
-    void initVSS();
-    void setVSS(int vss);
+    void getAdcSpeed(int& adc /Out/);
+    void initVsSpeed();
+    void setVsSpeed(int vss);
+    void getVsSpeed(int& vss /Out/);
     void initPGain();
     void setPGain(int gain);
+    void getPGain(int& gain /Out/);
     void setFastExtTrigger(bool flag);
     void getFastExtTrigger(bool& flag /Out/);
     void setShutterLevel(int level);
@@ -123,10 +130,10 @@ namespace Andor
     void setCooler(bool flag);
     void getCooler(bool& flag /Out/);
     void getCoolingStatus(std::string& status /Out/);
-    void setSpooling(bool flag, SpoolingMethod method, std::string path, int frameBufferSize);
-    void setHighCapacity(HighCapacityMode mode);
-    void setGateMode(GateMode mode);
-    void setReadMode(ReadMode mode);
+    void setSpooling(bool flag, Andor::SpoolingMethod method, std::string path, int frameBufferSize);
+    void setHighCapacity(Andor::HighCapacityMode mode);
+    void setGateMode(Andor::GateMode mode);
+    //void setReadMode(Andor::ReadMode mode);
     
   };
 

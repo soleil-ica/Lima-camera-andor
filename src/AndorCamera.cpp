@@ -1,4 +1,4 @@
-//###########################################################################
+///###########################################################################
 // This file is part of LImA, a Library for Image Acquisition
 //
 // Copyright (C) : 2009-2012
@@ -1079,13 +1079,13 @@ void Camera::initialiseController()
                     << m_adc_speeds[is].speed  << ((is == m_adc_speed_max)? " [max]": "");                        
     }
         
-    // --- Set adc / speed
+    // --- Set adc / speed to max
     setAdcSpeed(m_adc_speed_max);
     DEB_TRACE() << "    => Set to " << m_adc_speeds[m_adc_speed_max].speed << "MHz";
        
         
     // --- Init VS Speeds 
-    initVSS();
+    initVsSpeed();
       
     DEB_TRACE() << "* Vertical Shift Speed:";
     for (is=0; is<m_vss_number; is++)
@@ -1094,12 +1094,12 @@ void Camera::initialiseController()
                     << ((is == m_vss_best)? " [recommended]": "");
     }
         
-    // --- Set VS Speed
-    setVSS(m_vss);
+    // --- Set VS Speed to fasten recommended
+    setVsSpeed(m_vss_best);
     DEB_TRACE() << "    => Set " << m_vsspeeds[m_vss] << "us";
         
         
-    // --- Init Preamp Gain
+    // --- Init Preamp Gain to max
     initPGain();
        
     DEB_TRACE() << "* Preamp Gain:";
@@ -1111,7 +1111,7 @@ void Camera::initialiseController()
     }
     
     // --- Set Preamp Gain
-    setPGain(m_gain);
+    setPGain(m_gain_max);
     DEB_TRACE() << "    => Set to x" << m_preamp_gains[m_gain];                 
 }
 //-----------------------------------------------------
@@ -1158,9 +1158,7 @@ void Camera::initAdcSpeed()
                 THROW_HW_ERROR(Error) << "Cannot get Horizontal Speed ";            
 	    }
 	    m_adc_speeds[is].adc= ia;
-	    m_adc_speeds[is].hss= ih;
-
-	    // --- iKon/iXon= speed in MHz ; others in us/pixel shift --> convert in MHz
+	    m_adc_speeds[is].hss= ih;	    // --- iKon/iXon= speed in MHz ; others in us/pixel shift --> convert in MHz
 	    if ((m_camera_capabilities.ulCameraType!=1)&&(m_camera_capabilities.ulCameraType!=13))
 		m_adc_speeds[is].speed = (float)(1./ m_adc_speeds[is].speed);
 
@@ -1173,9 +1171,9 @@ void Camera::initAdcSpeed()
     }      
 }
 
-//-----------------------------------------------------
-// @brief	get ADC/Speed settings
-// @param	adc pais adc/speed index (if =-1, set to max speed)
+ //-----------------------------------------------------
+// @brief	set ADC/Speed settings
+// @param	adc pair adc/speed index (if =-1, set to max speed)
 //
 //-----------------------------------------------------
 void Camera::setAdcSpeed(int adc)
@@ -1209,12 +1207,22 @@ void Camera::setAdcSpeed(int adc)
 
 
 //-----------------------------------------------------
+// @brief	get ADC/Speed settings
+// @param	adc index
+//
+//-----------------------------------------------------
+void Camera::getAdcSpeed(int& adc)
+{
+    adc = m_adc;
+}
+
+//-----------------------------------------------------
 // @brief get possible VSS (vertical shift speed) for controller
 //
 // Initialise the list of possible vss index and their value
 // Get also the recommended VSS.
 //-----------------------------------------------------
-void Camera::initVSS()
+void Camera::initVsSpeed()
 {
     DEB_MEMBER_FUNCT();
     float speed;
@@ -1251,11 +1259,11 @@ void Camera::initVSS()
 
 
 //-----------------------------------------------------
-// @brief	get Vertical Shift Speed
+// @brief	set Vertical Shift Speed
 // @param	vss index (if =-1, set to recommended)
 //
 //-----------------------------------------------------
-void Camera::setVSS(int vss) 
+void Camera::setVsSpeed(int vss) 
 {
     DEB_MEMBER_FUNCT();
     int is;
@@ -1270,12 +1278,22 @@ void Camera::setVSS(int vss)
     }
     if (andorError(SetVSSpeed(is)))
     {
-	DEB_ERROR() << "Failed to set VSS #" << is <<" : error code = " << m_camera_error_str;
-        THROW_HW_ERROR(Error) << "Failed to set VSS";
+	DEB_ERROR() << "Failed to set VS speed #" << is <<" : error code = " << m_camera_error_str;
+        THROW_HW_ERROR(Error) << "Failed to set VS speed";
     }
     m_vss = is;
 
-    DEB_TRACE() << "VSSpeed Set to " <<m_vsspeeds[is] << "us";
+    DEB_TRACE() << "VS speed Set to " <<m_vsspeeds[is] << "us";
+}
+
+//-----------------------------------------------------
+// @brief	get Vertical Shift Speed
+// @param	vss index
+//
+//-----------------------------------------------------
+void Camera::getVsSpeed(int& vss) 
+{
+    vss = m_vss;
 }
 
 //-----------------------------------------------------
@@ -1317,7 +1335,7 @@ void Camera::initPGain()
 
 //-----------------------------------------------------
 // @brief	set Preamp Gain
-// @param	gain premap gain index
+// @param	gain preamp gain index
 //
 //-----------------------------------------------------
 void Camera::setPGain(int gain) 
@@ -1331,6 +1349,11 @@ void Camera::setPGain(int gain)
     }
     else
     {
+        if (gain<-1 || gain>=m_gain_number)
+        {
+	    DEB_ERROR() << "Invalid gain index range is" << "[0," << m_gain_number-1 << "] or -1 for max gain";
+	    THROW_HW_ERROR(Error) << "Invalid gain index range is" << "[0," << m_gain_number-1 << "] or -1 for max gain"; 
+	}
 	ig= gain;
     }
 
@@ -1342,6 +1365,16 @@ void Camera::setPGain(int gain)
     m_gain= ig;
 
     DEB_TRACE() << "Preamp Gain set to x" << m_preamp_gains[ig];
+}
+
+//-----------------------------------------------------
+// @brief	get Preamp Gain
+// @param	gain preamp gain index
+//
+//-----------------------------------------------------
+void Camera::getPGain(int& gain) 
+{
+    gain = m_gain;
 }
 
 //-----------------------------------------------------
@@ -1708,16 +1741,18 @@ void Camera::setGateMode(GateMode mode)
 // @param	mode    mode to set
 //
 //-----------------------------------------------------
-void Camera::setReadMode(ReadMode mode)
-{
-    DEB_MEMBER_FUNCT();
+// CANNOT BE USED WITHOUT A MaxImageSizeCallback because the read-mode
+// changes the image size.
+//void Camera::setReadMode(ReadMode mode)
+//{
+//    DEB_MEMBER_FUNCT();
 
-    if(andorError(SetReadMode((int) mode)))
-    {
-        DEB_ERROR() << "Error while setting read mode" <<" : error code = " << m_camera_error_str;
-        THROW_HW_ERROR(Error) << "Failed to set read mode";
-    }
-}
+//    if(andorError(SetReadMode((int) mode)))
+//    {
+//        DEB_ERROR() << "Error while setting read mode" <<" : error code = " << m_camera_error_str;
+//        THROW_HW_ERROR(Error) << "Failed to set read mode";
+//    }
+//}
 
 //-----------------------------------------------------
 // @brief handle the andor error codes

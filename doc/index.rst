@@ -56,7 +56,131 @@ Installation
 
 - And probably Tango server :ref:`tango_installation`
 
+Initialisation and Capabilities
+````````````````````````````````
+In order to help people to understand how the camera plugin has been implemented in LImA this section
+provide some important information about the developer's choices.
+
+Camera initialisation
+......................
+
+The camera will be initialized   within the AndorCamera  object.  The AndorCamera contructor
+sets the camera with default parameters for Preampifier-Gain, VerticalShiftSpeed and the ADC/HorizontalSpeed.
+
+These parameters are optimized for the faster mode, which means the maximum gain, the "fasten recommended" VSSpeed (i.e as returned
+by GetFastestRecommendedVSSpeed() SDK function call) and the ADC with the faster Horizontal speed.
+
+All the parameters can be set and get using the corresponding methods, the default values (max speeds and gain)
+can be applied with -1 as passed value:
+
+ set/getPGain()
+ 
+ set/getVsSpeed()
+
+ set/getADCSpeed()
+
+
+Std capabilites
+................
+
+This plugin has been implement in respect of the mandatory capabilites but with some limitations which
+are due to the camera and SDK features.  We only provide here extra information for a better understanding
+of the capabilities for Andor cameras.
+
+* HwDetInfo
+  
+  getCurrImageType/getDefImageType(): the methods call the  SDK GetBitDepth() function to resolve the image
+  data type. The bit-depth correspond to the AD channel dynamic range which depends on the selected ADC channel.
+  By experience and with IKon detectors we only have Bpp16 of dynamic range, but the methods can return Bpp8 and Bpp32
+  as well.
+
+  setCurrImageType(): this method do not change the image type which is fixed to 16bpp.
+
+* HwSync
+
+  get/setTrigMode(): the only supported mode are IntTrig, ExtTrigSingle, ExtGate and IntTrigMult
+  
+  
+
+Optional capabilites
+........................
+In addition to the standard capabilities, we make the choice to implement some optional capabilities which
+are supported by the SDK and the I-Kon cameras. A Shutter control, a hardware ROI and a hardware Binning are available.
+
+* HwShutter
+
+  setMode(): only ShutterAuto and ShutterManual modes are supported 
+
+* HwRoi
+
+  There is no restriction for the ROI setting
+
+* HwBin 
+
+  There is no restriction for the Binning but the maximum binning is given by the SDK function GetMaximumBinning() which depends
+  on the camera model
+
 Configuration
 `````````````
 
  - Plug your USB camera  on any USB port of the computer, that's all !!!
+
+
+How to use
+````````````
+This is a python code example for a simple test:
+
+.. code-block:: python
+
+  from Lima import Andor
+  from lima impor Core
+
+  cam = Andor.Camera("/usr/local/etc/andor", 0)
+  hwint = Andor.Interface(cam)
+  control = Core.control(hwint)
+
+  acq = control.acquisition()
+
+  # configure some hw parameters
+  hwint.setTemperatureSP(-30)
+  hwint.setCooler(True)
+  .... wait here for cooling
+
+  hwint.setPGain(2)
+
+
+  # setting new file parameters and autosaving mode
+  saving=c.saving()
+
+  pars=saving.getParameters()
+  pars.directory='/buffer/lcb18012/opisg/test_lima'
+  pars.prefix='test1_'
+  pars.suffix='.edf'
+  pars.fileFormat=Core.CtSaving.EDF
+  pars.savingMode=Core.CtSaving.AutoFrame
+  saving.setParameters(pars)
+
+  # set accumulation mode
+
+  acq_pars= acq.getPars()
+
+  #0-normal,1-concatenation,2-accumu
+  acq_pars.acqMode = 2
+  acq_pars.accMaxExpoTime = 0.05
+  acq_pars.acqExpoTime =1
+  acq_pars.acqNbFrames = 1
+
+  acq.setPars(acq_pars)
+  # here we should have 21 accumalated images per frame
+  print acq.getAccNbFrames()
+
+  # now ask for 2 sec. exposure and 10 frames
+  acq.setAcqExpoTime(2)
+  acq.setNbImages(10) 
+  
+  acq.prepareAcq()
+  acq.startAcq()
+
+  
+
+  
