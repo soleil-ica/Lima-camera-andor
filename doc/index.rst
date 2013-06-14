@@ -3,16 +3,16 @@ Andor
 
 .. image:: ikon-m_934_header.jpg 
 
-Intoduction
-```````````
+Introduction
+````````````
 Andor Technology manufactuer offers a large catalogue of scientific cameras. Covered scientific applications are low ligth imaging, spectroscopy, microscopy, time-resolved and high energy detection. 
 Andor is providing a unique Software Development Tool (SDK) for both Windows and Linux, supporting different interface buses such as USB, CameraLink and also some specific acquisition PCI board.
 
 The Lima module as been tested only with this cameras models:
   - IKon-M (USB interface, Linux OS)
 
-Module configuration
-````````````````````
+Prerequisite
+````````````
 Previously to this you have to install the Andor SDK the default path (/usr/local).
 For our test we us the SDK for Linux version **V2.91.30001.0** and ran the install script "install_andor"
 for which option 5 (All USB Cameras) was selected, the default installation is made under /usr/local/ with:
@@ -21,12 +21,17 @@ for which option 5 (All USB Cameras) was selected, the default installation is m
   - /usr/local/lib, library files
   - /usr/local/etc/andor, configuration files
 
-The Linux SSK 2.91 has shared libraries which has been compiled on recent linux kernel, check first you have the right kernel and
+The Linux SDK 2.91 has shared libraries which has been compiled on recent linux kernel, check first you have the right kernel and
 libc available by compiling one of the example program available under examples/console.
 Andor python module needs at least the lima core module.
 
 For the USB camera the SDK is using the libusb under linux, check first your system is equiped with the libusb package otherwise you
 will not compile the Andor Lima plugin.
+
+Installation & Module configuration
+````````````````````````````````````
+
+-  follow first the steps for the linux installation :ref:`linux_installation`
 
 The minimum configuration file is *config.inc* :
 
@@ -46,15 +51,9 @@ The minimum configuration file is *config.inc* :
          COMPILE_ESPIA COMPILE_FRELON COMPILE_MAXIPIX COMPILE_PILATUS \
          COMPILE_BASLER COMPILE_ANDOR COMPILE_CBF_SAVING
 
+-  start the compilation :ref:`linux_compilation`
 
-See :ref:`Compilation`
-
-Installation
-`````````````
-
-- After installing andor modules :ref:`installation`
-
-- And probably Tango server :ref:`tango_installation`
+-  finally for the Tango server installation :ref:`tango_installation`
 
 Initialisation and Capabilities
 ````````````````````````````````
