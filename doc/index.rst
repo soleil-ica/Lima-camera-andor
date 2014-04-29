@@ -2,6 +2,7 @@ Andor
 -------
 
 .. image:: ikon-m_934_header.jpg 
+.. image:: ikon-L.jpg 
 
 Introduction
 ````````````
@@ -10,9 +11,11 @@ Andor is providing a unique Software Development Tool (SDK) for both Windows and
 
 The Lima module as been tested only with this cameras models:
   - IKon-M (USB interface, Linux OS)
+  - IKon-L (USB interface, Windows XP - 32bits)
 
-Prerequisite
-````````````
+Prerequisite Linux OS
+`````````````````````
+
 Previously to this you have to install the Andor SDK the default path (/usr/local).
 For our test we us the SDK for Linux version **V2.91.30001.0** and ran the install script "install_andor"
 for which option 5 (All USB Cameras) was selected, the default installation is made under /usr/local/ with:
@@ -27,6 +30,16 @@ Andor python module needs at least the lima core module.
 
 For the USB camera the SDK is using the libusb under linux, check first your system is equiped with the libusb package otherwise you
 will not compile the Andor Lima plugin.
+
+Prerequisite Windows XP - 32 bits
+`````````````````````````````````
+
+Previously to this you have to install the Andor "\\Software developpement Kit (SDK)" using the default path (C:\\Program Files (x86)\Andor iKon\Drivers).
+
+Generate "Lima Andor library" using the Visual Studio 2008 (msvc9) solution (\Lima\camera\andor\build\msvc\9.0\LibAndor.sln).
+
+Add the location of the file "\Lima\camera\andor\sdk\msvc\bin\ATMCD32D.DLL" to your PATH environement variable.
+
 
 Installation & Module configuration
 ````````````````````````````````````
