@@ -8,7 +8,7 @@ namespace Andor
   public:
 
 
-    Interface(Andor::Camera& cam);
+    Interface(Andor::Camera& cam /KeepReference/);
     virtual ~Interface();
 
     //- From HwInterface

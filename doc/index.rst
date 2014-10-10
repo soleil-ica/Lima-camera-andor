@@ -1,5 +1,7 @@
-Andor
--------
+.. _camera-andor:
+
+Andor SDK2 camera plugin
+------------------------
 
 .. image:: ikon-m_934_header.jpg 
 .. image:: ikon-L.jpg 
