@@ -36,7 +36,7 @@
 	#include <sys/timeb.h>
 	#include <time.h>
 
-#elif
+#else
 	#include <atmcdLXd.h>
 #endif
 
@@ -304,7 +304,7 @@ namespace lima
 	    float                       m_kin_time;
 #if defined(WIN32)
 		long                        m_ring_buffer_size;  		
-#elif		
+#else
 	    int                         m_ring_buffer_size;                
 #endif
 	    map<int, string>            m_andor_type_maps;            
