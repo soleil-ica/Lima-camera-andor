@@ -22,42 +22,51 @@
 #ifndef ANDORCAMERA_H
 #define ANDORCAMERA_H
 
+#include "AndorCompatibility.h"
+
 #if defined (__GNUC__) && (__GNUC__ == 3) && defined (__ELF__)
 #   define GENAPI_DECL __attribute__((visibility("default")))
 #   define GENAPI_DECL_ABSTRACT __attribute__((visibility("default")))
 #endif
 
-#include <atmcdLXd.h>
+
+#if defined(WIN32)
+
+	#include <ATMCD32D.H>
+	#include <sys/timeb.h>
+	#include <time.h>
+
+#else
+	#include <atmcdLXd.h>
+#endif
+
 #ifndef DRV_P11INVALID
-
-#define DRV_P11INVALID 20087
-#define DRV_GATESTEPERROR 20092
-#define DRV_INVALID_COUNTCONVERT_MODE 20101
-
-#define DRV_OA_NULL_ERROR 20173
-#define DRV_OA_PARSE_DTD_ERROR 20174
-#define DRV_OA_DTD_VALIDATE_ERROR 20175
-#define DRV_OA_FILE_ACCESS_ERROR 20176
-#define DRV_OA_FILE_DOES_NOT_EXIST 20177
-#define DRV_OA_XML_INVALID_OR_NOT_FOUND_ERROR 20178
-#define DRV_OA_PRESET_FILE_NOT_LOADED 20179
-#define DRV_OA_USER_FILE_NOT_LOADED 20180
-#define DRV_OA_PRESET_AND_USER_FILE_NOT_LOADED 20181
-#define DRV_OA_INVALID_FILE 20182
-#define DRV_OA_FILE_HAS_BEEN_MODIFIED 20183
-#define DRV_OA_BUFFER_FULL 20184
-#define DRV_OA_INVALID_STRING_LENGTH 20185
-#define DRV_OA_INVALID_CHARS_IN_NAME 20186
-#define DRV_OA_INVALID_NAMING 20187
-#define DRV_OA_GET_CAMERA_ERROR 20188
-#define DRV_OA_MODE_ALREADY_EXISTS 20189
-#define DRV_OA_STRINGS_NOT_EQUAL 20190
-#define DRV_OA_NO_USER_DATA 20191
-#define DRV_OA_VALUE_NOT_SUPPORTED 20192
-#define DRV_OA_MODE_DOES_NOT_EXIST 20193
-#define DRV_OA_CAMERA_NOT_SUPPORTED 20194
-#define DRV_OA_FAILED_TO_GET_MODE 20195
-
+	#define DRV_P11INVALID 20087
+	#define DRV_GATESTEPERROR 20092
+	#define DRV_INVALID_COUNTCONVERT_MODE 20101
+	#define DRV_OA_NULL_ERROR 20173
+	#define DRV_OA_PARSE_DTD_ERROR 20174
+	#define DRV_OA_DTD_VALIDATE_ERROR 20175
+	#define DRV_OA_FILE_ACCESS_ERROR 20176
+	#define DRV_OA_FILE_DOES_NOT_EXIST 20177
+	#define DRV_OA_XML_INVALID_OR_NOT_FOUND_ERROR 20178
+	#define DRV_OA_PRESET_FILE_NOT_LOADED 20179
+	#define DRV_OA_USER_FILE_NOT_LOADED 20180
+	#define DRV_OA_PRESET_AND_USER_FILE_NOT_LOADED 20181
+	#define DRV_OA_INVALID_FILE 20182
+	#define DRV_OA_FILE_HAS_BEEN_MODIFIED 20183
+	#define DRV_OA_BUFFER_FULL 20184
+	#define DRV_OA_INVALID_STRING_LENGTH 20185
+	#define DRV_OA_INVALID_CHARS_IN_NAME 20186
+	#define DRV_OA_INVALID_NAMING 20187
+	#define DRV_OA_GET_CAMERA_ERROR 20188
+	#define DRV_OA_MODE_ALREADY_EXISTS 20189
+	#define DRV_OA_STRINGS_NOT_EQUAL 20190
+	#define DRV_OA_NO_USER_DATA 20191
+	#define DRV_OA_VALUE_NOT_SUPPORTED 20192
+	#define DRV_OA_MODE_DOES_NOT_EXIST 20193
+	#define DRV_OA_CAMERA_NOT_SUPPORTED 20194
+	#define DRV_OA_FAILED_TO_GET_MODE 20195
 #endif
 
 #include <stdlib.h>
@@ -117,7 +126,7 @@ namespace lima
  * \class Camera
  * \brief object controlling the andor camera via Pylon driver
  *******************************************************************/
-	class Camera
+	class LIBANDOR_API Camera
 	{
 	    DEB_CLASS_NAMESPC(DebModCamera, "Camera", "Andor");
 	    friend class Interface;
@@ -131,8 +140,7 @@ namespace lima
 		FRAME,
 		MANUAL
 	    };
-    
-    
+
 	    Camera(const std::string& config_path,int camera_number=0);
 	    ~Camera();
 
@@ -200,6 +208,7 @@ namespace lima
 	    void initAdcSpeed();
 	    void setAdcSpeed(int adc);
 	    void getAdcSpeed(int& adc);
+        void getAdcSpeedInMhz(float& adc);
 	    void initVsSpeed();
 	    void setVsSpeed(int vss);
 	    void getVsSpeed(int& vss);
@@ -221,8 +230,7 @@ namespace lima
 	    void setGateMode(GateMode mode);
 	    //void setReadMode(ReadMode mode);
     
-    
-    
+
 	private:
 	    class _AcqThread;
 	    friend class _AcqThread;
@@ -294,7 +302,11 @@ namespace lima
 	    float                       m_exp_time;
 	    float                       m_exp_time_max;
 	    float                       m_kin_time;
+#if defined(WIN32)
+		long                        m_ring_buffer_size;  		
+#else
 	    int                         m_ring_buffer_size;                
+#endif
 	    map<int, string>            m_andor_type_maps;            
 	    map<int, string>            m_andor_error_maps;
 	};

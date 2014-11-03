@@ -19,6 +19,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //############################################################################
+
 #include <sstream>
 #include <iostream>
 #include <string>
@@ -87,7 +88,11 @@ Camera::Camera(const std::string& config_path,int camera_number)
     _mapAndorError();
   
     // --- Get available cameras and select the choosen one.
+#if defined(WIN32)
+    long numCameras;	
+#else
     int numCameras;
+#endif	
     DEB_TRACE() << "Get all attached cameras";
     if (GetAvailableCameras(&numCameras)!= DRV_SUCCESS)
     {
@@ -170,7 +175,7 @@ Camera::Camera(const std::string& config_path,int camera_number)
 		<< "    * Model : " << m_detector_model;
 
 
-        
+    
     // --- Initialise deeper parameters of the controller                
     initialiseController();            
     
@@ -237,7 +242,7 @@ Camera::Camera(const std::string& config_path,int camera_number)
     }               
 
     // --- set shutter mode to FRAME
-    setShutterMode(FRAME);
+    setShutterMode(FRAME);        
     
     // --- finally start the acq thread
     m_acq_thread = new _AcqThread(*this);
@@ -331,7 +336,11 @@ void Camera::startAcq()
     //}
     if (m_trig_mode != IntTrig && m_trig_mode != IntTrigMult)
     {
+#if defined(WIN32)
+		Sleep(0.1);
+#else
         usleep(1e5);
+#endif		
     }
 
 }
@@ -410,11 +419,17 @@ void Camera::_AcqThread::threadFunction()
 
         bool continueAcq = true;
 	
+#if defined(WIN32)
+	long first = 0, last = 0, prev_last = 0;		
+	long validfirst, validlast;
+#else
 	int first = 0, last = 0, prev_last = 0;
+	int validfirst, validlast;	
+#endif	
 	FrameDim frame_dim = buffer_mgr.getFrameDim();
 	Size  frame_size = frame_dim.getSize();
 	int size = frame_size.getWidth() * frame_size.getHeight();
-	int validfirst, validlast;
+
 
         while(continueAcq && (!m_cam.m_nb_frames || m_cam.m_image_number < m_cam.m_nb_frames))
         {
@@ -538,7 +553,7 @@ void Camera::getImageType(ImageType& type)
     // --- Get the AD channel dynamic range in bits per pixel
     // --- suppose here channel 0 is set, in fact we do not provide any
     // --- command to select a different ADC if the detector has several.
-    DEB_TRACE() << "m_adc = "<< m_adc;
+
     
     if (andorError(GetBitDepth(m_adc, &bits)))
     {
@@ -1217,6 +1232,16 @@ void Camera::getAdcSpeed(int& adc)
 }
 
 //-----------------------------------------------------
+// @brief	get ADC/Speed settings
+// @param	adc frequency
+//
+//-----------------------------------------------------
+void Camera::getAdcSpeedInMhz(float& adc)
+{
+    adc = m_adc_speeds[m_adc].speed;
+}
+
+//-----------------------------------------------------
 // @brief get possible VSS (vertical shift speed) for controller
 //
 // Initialise the list of possible vss index and their value
@@ -1415,6 +1440,7 @@ void Camera::setShutterLevel(int level)
 {
     DEB_MEMBER_FUNCT();
 
+	DEB_TRACE() << "Camera::setShutterLevel - " << DEB_VAR1(level);		
     if (andorError(SetShutter(level, m_shutter_mode, m_shutter_close_time, m_shutter_open_time)))
     {
         DEB_ERROR() << "Failed to set shutter level" <<" : error code = " << m_camera_error_str;
@@ -1444,8 +1470,11 @@ void Camera::setShutterMode(ShutterMode mode)
 {
     DEB_MEMBER_FUNCT();
     // --- SetShutter() param mode is both used to set  auto or manual mode and to open and close
-    // --- 0 - Auto, 1 - Open, 2 - Close
+    // --- 0 - Auto, 1 - Open, 2 - Close	
     int aMode = (mode == FRAME)? 0:2;
+	DEB_TRACE() << "Camera::setShutterMode - " << DEB_VAR1(aMode)
+                <<" - Close Time  = "<<m_shutter_close_time
+                <<" - Open Time  = "<<m_shutter_open_time;		
     if (mode == FRAME)
     {    
         if (andorError(SetShutter(m_shutter_level, aMode, m_shutter_close_time, m_shutter_open_time)))
@@ -1480,6 +1509,9 @@ void Camera::setShutter(bool flag)
     // --- SetShutter() param mode is both used to set in auto or manual mode and to open and close
     // --- 0 - Auto, 1 - Open, 2 - Close
     int aMode = (flag)? 1:2; 
+	DEB_TRACE() << "Camera::setShutter - " << DEB_VAR1(aMode)
+                <<" - Close Time  = "<<m_shutter_close_time
+                <<" - Open Time  = "<<m_shutter_open_time;			
     if (andorError(SetShutter(m_shutter_level, aMode, m_shutter_close_time, m_shutter_open_time)))
     {
         DEB_ERROR() << "Failed close/open the shutter" <<" : error code = " << m_camera_error_str;
@@ -1510,6 +1542,7 @@ void Camera::setShutterOpenTime(double tm)
     DEB_MEMBER_FUNCT();
     int aTime = tm *1000;
     
+	DEB_TRACE() << "Camera::setShutterOpenTime - " << DEB_VAR1(aTime);			
     if (andorError(SetShutter(m_shutter_level, m_shutter_mode, m_shutter_close_time, aTime)))
     {
         DEB_ERROR() << "Failed to set shutter openning time" <<" : error code = " << m_camera_error_str;
@@ -1538,7 +1571,7 @@ void Camera::setShutterCloseTime(double tm)
 {
     DEB_MEMBER_FUNCT();
     int aTime = tm *1000;
-    
+	DEB_TRACE() << "Camera::setShutterCloseTime - " << DEB_VAR1(aTime);			    
     if (andorError(SetShutter(m_shutter_level, m_shutter_mode, aTime, m_shutter_open_time)))
     {
         DEB_ERROR() << "Failed to set shutter closing time" <<" : error code = " << m_camera_error_str;
@@ -1791,7 +1824,6 @@ void Camera::_mapAndorError()
     m_andor_error_maps[DRV_KINETIC_TIME_NOT_MET] = "DRV_KINETIC_TIME_NOT_MET";
     m_andor_error_maps[DRV_ACCUM_TIME_NOT_MET] = "DRV_ACCUM_TIME_NOT_MET";
     m_andor_error_maps[DRV_NO_NEW_DATA] = "DRV_NO_NEW_DATA";
-    m_andor_error_maps[KERN_MEM_ERROR] = "KERN_MEM_ERROR";
     m_andor_error_maps[DRV_SPOOLERROR] = "DRV_SPOOLERROR";
     m_andor_error_maps[DRV_SPOOLSETUPERROR] = "DRV_SPOOLSETUPERROR";
     m_andor_error_maps[DRV_FILESIZELIMITERROR] = "DRV_FILESIZELIMITERROR";
@@ -1839,9 +1871,6 @@ void Camera::_mapAndorError()
     m_andor_error_maps[DRV_I2CDEVNOTFOUND] = "DRV_I2CDEVNOTFOUND";
     m_andor_error_maps[DRV_I2CTIMEOUT] = "DRV_I2CTIMEOUT";
     m_andor_error_maps[DRV_P7INVALID] = "DRV_P7INVALID";
-    m_andor_error_maps[DRV_P8INVALID] = "DRV_P8INVALID";
-    m_andor_error_maps[DRV_P9INVALID] = "DRV_P9INVALID";
-    m_andor_error_maps[DRV_P10INVALID] = "DRV_P10INVALID";
     m_andor_error_maps[DRV_P11INVALID] = "DRV_P11INVALID";
     m_andor_error_maps[DRV_USBERROR] = "DRV_USBERROR";
     m_andor_error_maps[DRV_IOCERROR] = "DRV_IOCERROR";
@@ -1854,7 +1883,6 @@ void Camera::_mapAndorError()
     m_andor_error_maps[DRV_DIVIDE_BY_ZERO_ERROR] = "DRV_DIVIDE_BY_ZERO_ERROR";
     m_andor_error_maps[DRV_INVALID_RINGEXPOSURES] = "DRV_INVALID_RINGEXPOSURES";
     m_andor_error_maps[DRV_BINNING_ERROR] = "DRV_BINNING_ERROR";
-    m_andor_error_maps[DRV_INVALID_AMPLIFIER] = "DRV_INVALID_AMPLIFIER";
     m_andor_error_maps[DRV_INVALID_COUNTCONVERT_MODE] = "DRV_INVALID_COUNTCONVERT_MODE";
     m_andor_error_maps[DRV_NOT_SUPPORTED] = "DRV_NOT_SUPPORTED";
     m_andor_error_maps[DRV_NOT_AVAILABLE] = "DRV_NOT_AVAILABLE";
@@ -1866,12 +1894,6 @@ void Camera::_mapAndorError()
     m_andor_error_maps[DRV_ERROR_NOHANDLE] = "DRV_ERROR_NOHANDLE";
     m_andor_error_maps[DRV_GATING_NOT_AVAILABLE] = "DRV_GATING_NOT_AVAILABLE";
     m_andor_error_maps[DRV_FPGA_VOLTAGE_ERROR] = "DRV_FPGA_VOLTAGE_ERROR";
-    m_andor_error_maps[DRV_OW_CMD_FAIL] = "DRV_OW_CMD_FAIL";
-    m_andor_error_maps[DRV_OWMEMORY_BAD_ADDR] = "DRV_OWMEMORY_BAD_ADDR";
-    m_andor_error_maps[DRV_OWCMD_NOT_AVAILABLE] = "DRV_OWCMD_NOT_AVAILABLE";
-    m_andor_error_maps[DRV_OW_NO_SLAVES] = "DRV_OW_NO_SLAVES";
-    m_andor_error_maps[DRV_OW_NOT_INITIALIZED] = "DRV_OW_NOT_INITIALIZED";
-    m_andor_error_maps[DRV_OW_ERROR_SLAVE_NUM] = "DRV_OW_ERROR_SLAVE_NUM";
     m_andor_error_maps[DRV_MSTIMINGS_ERROR] = "DRV_MSTIMINGS_ERROR";
     m_andor_error_maps[DRV_OA_NULL_ERROR] = "DRV_OA_NULL_ERROR";
     m_andor_error_maps[DRV_OA_PARSE_DTD_ERROR] = "DRV_OA_PARSE_DTD_ERROR";
@@ -1896,4 +1918,18 @@ void Camera::_mapAndorError()
     m_andor_error_maps[DRV_OA_MODE_DOES_NOT_EXIST] = "DRV_OA_MODE_DOES_NOT_EXIST";
     m_andor_error_maps[DRV_OA_CAMERA_NOT_SUPPORTED] = "DRV_OA_CAMERA_NOT_SUPPORTED";
     m_andor_error_maps[DRV_OA_FAILED_TO_GET_MODE] = "DRV_OA_FAILED_TO_GET_MODE";
+#if !defined(WIN32)    
+   m_andor_error_maps[KERN_MEM_ERROR] = "KERN_MEM_ERROR";
+   m_andor_error_maps[DRV_P8INVALID] = "DRV_P8INVALID";
+   m_andor_error_maps[DRV_P9INVALID] = "DRV_P9INVALID";
+   m_andor_error_maps[DRV_P10INVALID] = "DRV_P10INVALID";
+   m_andor_error_maps[DRV_INVALID_AMPLIFIER] = "DRV_INVALID_AMPLIFIER";
+   m_andor_error_maps[DRV_OW_CMD_FAIL] = "DRV_OW_CMD_FAIL";
+   m_andor_error_maps[DRV_OWMEMORY_BAD_ADDR] = "DRV_OWMEMORY_BAD_ADDR";
+   m_andor_error_maps[DRV_OWCMD_NOT_AVAILABLE] = "DRV_OWCMD_NOT_AVAILABLE";
+   m_andor_error_maps[DRV_OW_NO_SLAVES] = "DRV_OW_NO_SLAVES";
+   m_andor_error_maps[DRV_OW_NOT_INITIALIZED] = "DRV_OW_NOT_INITIALIZED";
+   m_andor_error_maps[DRV_OW_ERROR_SLAVE_NUM] = "DRV_OW_ERROR_SLAVE_NUM";
+#endif
+    
 }
