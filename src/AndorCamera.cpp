@@ -90,7 +90,7 @@ Camera::Camera(const std::string& config_path,int camera_number)
     // --- Get available cameras and select the choosen one.
 #if defined(WIN32)
     long numCameras;	
-#elif	
+#else
     int numCameras;
 #endif	
     DEB_TRACE() << "Get all attached cameras";
@@ -338,7 +338,7 @@ void Camera::startAcq()
     {
 #if defined(WIN32)
 		Sleep(0.1);
-#elif		
+#else
         usleep(1e5);
 #endif		
     }
@@ -422,7 +422,7 @@ void Camera::_AcqThread::threadFunction()
 #if defined(WIN32)
 	long first = 0, last = 0, prev_last = 0;		
 	long validfirst, validlast;
-#elif		
+#else
 	int first = 0, last = 0, prev_last = 0;
 	int validfirst, validlast;	
 #endif	
