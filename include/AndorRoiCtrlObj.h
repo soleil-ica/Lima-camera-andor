@@ -23,7 +23,7 @@
 #define ANDORROICTRLOBJ_H
 
 #include "AndorCompatibility.h"
-#include "HwRoiCtrlObj.h"
+#include "lima/HwRoiCtrlObj.h"
 #include "AndorCamera.h"
 
 namespace lima

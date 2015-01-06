@@ -23,7 +23,7 @@
 #define ANDORSHUTTERCTRLOBJ_H
 
 #include "AndorCompatibility.h"
-#include "HwShutterCtrlObj.h"
+#include "lima/HwShutterCtrlObj.h"
 #include "AndorCamera.h"
 
 namespace lima
