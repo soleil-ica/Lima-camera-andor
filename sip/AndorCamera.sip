@@ -63,6 +63,7 @@ namespace Andor
     Camera(const std::string& config_path,int camera_number=0);
     ~Camera();
 
+    void prepareAcq();
     void startAcq();
     void stopAcq();
 

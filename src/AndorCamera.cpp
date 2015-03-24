@@ -272,6 +272,20 @@ Camera::~Camera()
 }
 
 //---------------------------
+// @brief  prepare the acquistion
+//---------------------------
+void Camera::prepareAcq()
+{
+    DEB_MEMBER_FUNCT();
+    
+    if (andorError(PrepareAcquisition()))
+    {
+        DEB_ERROR() << "Cannot prepare acquisition" << " : error code = " << m_camera_error_str;
+        THROW_HW_ERROR(Error) << "Cannot prepare acquisition";            
+    }
+
+}
+//---------------------------
 // @brief  start the acquistion
 //---------------------------
 void Camera::startAcq()
