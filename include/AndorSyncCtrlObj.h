@@ -22,7 +22,8 @@
 #ifndef ANDORSYNCCTRLOBJ_H
 #define ANDORSYNCCTRLOBJ_H
 
-#include "HwInterface.h"
+#include "AndorCompatibility.h"
+#include "lima/HwInterface.h"
 #include "AndorCamera.h"
 
 namespace lima
@@ -36,7 +37,7 @@ namespace lima
  * \brief Control object providing Andor synchronization interface
  *******************************************************************/
 
-	class SyncCtrlObj : public HwSyncCtrlObj
+	class LIBANDOR_API SyncCtrlObj : public HwSyncCtrlObj
 	{
 	    DEB_CLASS_NAMESPC(DebModCamera, "SyncCtrlObj", "Andor");
 

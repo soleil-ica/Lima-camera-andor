@@ -22,7 +22,8 @@
 #ifndef ANDORINTERFACE_H
 #define ANDORINTERFACE_H
 
-#include "HwInterface.h"
+#include "AndorCompatibility.h"
+#include "lima/HwInterface.h"
 #include "AndorCamera.h"
 #include "AndorDetInfoCtrlObj.h"
 #include "AndorSyncCtrlObj.h"
@@ -42,7 +43,7 @@ namespace lima
  * \brief Andor hardware interface
  *******************************************************************/
 
-	class Interface : public HwInterface
+	class LIBANDOR_API Interface : public HwInterface
 	{
 	    DEB_CLASS_NAMESPC(DebModCamera, "AndorInterface", "Andor");
 
@@ -79,6 +80,8 @@ namespace lima
 	    void setSpooling(bool flag, SpoolingMethod method, std::string path, int frameBufferSize);
 	    void setHighCapacity(HighCapacityMode mode);
 	    void setGateMode(GateMode mode);
+		//! get the camera object to access it directly from client
+		Camera& getCamera() { return m_cam;}
 
 	private:
 	    Camera&         m_cam;

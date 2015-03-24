@@ -115,6 +115,7 @@ namespace Andor
     void initAdcSpeed();
     void setAdcSpeed(int adc);
     void getAdcSpeed(int& adc /Out/);
+    void getAdcSpeedInMhz(float& adc /Out/);
     void initVsSpeed();
     void setVsSpeed(int vss);
     void getVsSpeed(int& vss /Out/);
