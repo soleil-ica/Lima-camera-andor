@@ -36,11 +36,11 @@ will not compile the Andor Lima plugin.
 Prerequisite Windows XP - 32 bits
 `````````````````````````````````
 
-Previously to this you have to install the Andor "\\Software developpement Kit (SDK)" using the default path (C:\\Program Files (x86)\Andor iKon\Drivers).
+Previously to this you have to install the Andor "\\Software developpement Kit (SDK)" using the default path (C:\\Program Files (x86)\\Andor iKon\\Drivers).
 
-Generate "Lima Andor library" using the Visual Studio 2008 (msvc9) solution (\Lima\camera\andor\build\msvc\9.0\LibAndor.sln).
+Generate "Lima Andor library" using the Visual Studio 2008 (msvc9) solution (\\Lima\\camera\\andor\\build\\msvc\\9.0\\LibAndor.sln).
 
-Add the location of the file "\Lima\camera\andor\sdk\msvc\bin\ATMCD32D.DLL" to your PATH environement variable.
+Add the location of the file "\\Lima\\camera\\andor\\sdk\\msvc\\bin\\ATMCD32D.DLL" to your PATH environement variable.
 
 
 Installation & Module configuration
