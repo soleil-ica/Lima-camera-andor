@@ -23,7 +23,7 @@
 #define ANDORSYNCCTRLOBJ_H
 
 #include "AndorCompatibility.h"
-#include "HwInterface.h"
+#include "lima/HwInterface.h"
 #include "AndorCamera.h"
 
 namespace lima

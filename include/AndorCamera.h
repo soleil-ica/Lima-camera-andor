@@ -71,8 +71,8 @@
 
 #include <stdlib.h>
 #include <limits>
-#include "HwMaxImageSizeCallback.h"
-#include "HwBufferMgr.h"
+#include "lima/HwMaxImageSizeCallback.h"
+#include "lima/HwBufferMgr.h"
 
 #include <ostream>
 
@@ -144,6 +144,7 @@ namespace lima
 	    Camera(const std::string& config_path,int camera_number=0);
 	    ~Camera();
 
+	    void prepareAcq();
 	    void startAcq();
 	    void stopAcq();
     

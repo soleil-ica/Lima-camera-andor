@@ -23,7 +23,7 @@
 #define ANDORDETINFOCTRLOBJ_H
 
 #include "AndorCompatibility.h"
-#include "HwDetInfoCtrlObj.h"
+#include "lima/HwDetInfoCtrlObj.h"
 #include "AndorCamera.h"
 
 namespace lima

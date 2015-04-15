@@ -23,7 +23,7 @@
 #define ANDORINTERFACE_H
 
 #include "AndorCompatibility.h"
-#include "HwInterface.h"
+#include "lima/HwInterface.h"
 #include "AndorCamera.h"
 #include "AndorDetInfoCtrlObj.h"
 #include "AndorSyncCtrlObj.h"
