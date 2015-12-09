@@ -151,9 +151,9 @@ This is a python code example for a simple test:
 
   cam = Andor.Camera("/usr/local/etc/andor", 0)
   hwint = Andor.Interface(cam)
-  control = Core.control(hwint)
+  ct = Core.control(hwint)
 
-  acq = control.acquisition()
+  acq = ct.acquisition()
 
   # configure some hw parameters
   hwint.setTemperatureSP(-30)
@@ -164,7 +164,7 @@ This is a python code example for a simple test:
 
 
   # setting new file parameters and autosaving mode
-  saving=c.saving()
+  saving=ct.saving()
 
   pars=saving.getParameters()
   pars.directory='/buffer/lcb18012/opisg/test_lima'
@@ -192,8 +192,8 @@ This is a python code example for a simple test:
   acq.setAcqExpoTime(2)
   acq.setNbImages(10) 
   
-  acq.prepareAcq()
-  acq.startAcq()
+  ct.prepareAcq()
+  ct.startAcq()
 
   
 
