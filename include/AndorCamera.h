@@ -203,13 +203,11 @@ namespace lima
 	    void reset();
 
 	    // -- andor specific
-	    void _mapAndorError();
-	    bool andorError(unsigned int code);
 	    void initialiseController();
 	    void initAdcSpeed();
 	    void setAdcSpeed(int adc);
 	    void getAdcSpeed(int& adc);
-        void getAdcSpeedInMhz(float& adc);
+	    void getAdcSpeedInMhz(float& adc);
 	    void initVsSpeed();
 	    void setVsSpeed(int vss);
 	    void getVsSpeed(int& vss);
@@ -269,8 +267,6 @@ namespace lima
 	    int                         m_camera_number;
 	    at_32                       m_camera_handle;
 	    AndorCapabilities           m_camera_capabilities;
-	    string                      m_camera_error_str;
-	    int                         m_camera_error;
     
 	    struct Adc 
 	    {
@@ -304,12 +300,11 @@ namespace lima
 	    float                       m_exp_time_max;
 	    float                       m_kin_time;
 #if defined(WIN32)
-		long                        m_ring_buffer_size;  		
+	    long                        m_ring_buffer_size;  		
 #else
 	    int                         m_ring_buffer_size;                
 #endif
 	    map<int, string>            m_andor_type_maps;            
-	    map<int, string>            m_andor_error_maps;
 	};
     } // namespace Andor
 } // namespace lima
