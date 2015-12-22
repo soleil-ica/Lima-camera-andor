@@ -198,11 +198,10 @@ Camera::Camera(const std::string& config_path,int camera_number)
     setTrigMode(IntTrig);
     
     // --- Set the Andor specific acquistion mode.
-    // --- We set acquisition mode to kinetics which is the more useful for us
-    // --- This mode allows to manage latency between images and multi-frame acquisition as well
-    m_acq_mode = 3; // Andor Kinetics mode
+    // --- We set acquisition mode to run-till-abort 
+    m_acq_mode = 5; //Run Till Abort
     m_nb_frames = 1;
-    THROW_IF_NOT_SUCCESS(SetAcquisitionMode(m_acq_mode), "Cannot get the vertical maximum binning");
+    THROW_IF_NOT_SUCCESS(SetAcquisitionMode(m_acq_mode), "Cannot set the acquisition mode");
      // --- set shutter mode to FRAME
     setShutterMode(FRAME);        
     
@@ -244,6 +243,7 @@ Camera::~Camera()
 void Camera::prepareAcq()
 {
     DEB_MEMBER_FUNCT();
+    m_image_number=0;
     
     THROW_IF_NOT_SUCCESS(PrepareAcquisition(), "Cannot prepare acquisition");
 }
@@ -253,7 +253,6 @@ void Camera::prepareAcq()
 void Camera::startAcq()
 {
     DEB_MEMBER_FUNCT();
-    m_image_number=0;
         
     // --- check first the acquisition is idle
     int status;
@@ -276,10 +275,13 @@ void Camera::startAcq()
     m_cond.broadcast();
     while(!m_thread_running)
         m_cond.wait();
-        
-    StdBufferCbMgr& buffer_mgr = m_buffer_ctrl_obj.getBuffer();
-    buffer_mgr.setStartTimestamp(Timestamp::now());
-    THROW_IF_NOT_SUCCESS(StartAcquisition(), "Cannot start acquisition");
+       
+    if(m_image_number == 0)
+    {
+        StdBufferCbMgr& buffer_mgr = m_buffer_ctrl_obj.getBuffer();
+	buffer_mgr.setStartTimestamp(Timestamp::now());
+	THROW_IF_NOT_SUCCESS(StartAcquisition(), "Cannot start acquisition");
+    }
     // in external mode even with FastExtTrigger enabled the camera can not grab the trigger
     // within a too short delay, 100ms is the minimum required, very slow camera !!!
     // and unfortunately the status is not reflecting this lack of synchro.
@@ -296,11 +298,13 @@ void Camera::startAcq()
     if (m_trig_mode != IntTrig && m_trig_mode != IntTrigMult)
     {
 #if defined(WIN32)
-		Sleep(0.1);
+        Sleep(0.1);
 #else
         usleep(1e5);
 #endif		
     }
+    if (m_trig_mode == IntTrigMult)
+        THROW_IF_NOT_SUCCESS(SendSoftwareTrigger(), "Cannot start acquisition");
 
 }
 
@@ -734,14 +738,14 @@ void Camera::setNbFrames(int nb_frames)
     DEB_MEMBER_FUNCT();
     DEB_PARAM() << DEB_VAR1(nb_frames);
     // --- Hoops continuous mode not yet supported    
-    if (nb_frames == 0)
-    {
-        DEB_ERROR() << "Sorry continuous acquisition (setNbFrames(0)) not yet implemented";
-        THROW_HW_ERROR(Error) << "Sorry continuous acquisition (setNbFrames(0)) not yet implemented";                
-    }
-    // --- We only work on kinetics mode which allow multi-frames to be taken
-    // ---
-    THROW_IF_NOT_SUCCESS(SetNumberKinetics(nb_frames), "Cannot set number of frames");
+    //    if (nb_frames == 0)
+    //    {
+    //        DEB_ERROR() << "Sorry continuous acquisition (setNbFrames(0)) not yet implemented";
+    //        THROW_HW_ERROR(Error) << "Sorry continuous acquisition (setNbFrames(0)) not yet implemented";                
+    //    }
+    //    // --- We only work on kinetics mode which allow multi-frames to be taken
+    //    // ---
+    //    THROW_IF_NOT_SUCCESS(SetNumberKinetics(nb_frames), "Cannot set number of frames");
     m_nb_frames = nb_frames;
 }
 
@@ -772,6 +776,12 @@ void Camera::getStatus(Camera::Status& status)
     DEB_MEMBER_FUNCT();
     AutoMutex aLock(m_cond.mutex());
     status = m_status;
+    //Check if the camera is not waiting for soft. trigger
+    if (status == Camera::Readout && 
+	m_trig_mode == IntTrigMult)
+      {
+	status = Camera::Ready;
+      }
     DEB_RETURN() << DEB_VAR1(DEB_HEX(status));
 }
 
