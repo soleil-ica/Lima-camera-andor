@@ -19,6 +19,7 @@ namespace Andor
 
     enum HighCapacityMode
     {
+        HC_UNSUPPORTED = -1,
         HIGH_SENSITIVITY = 0,
         HIGH_CAPACITY
     };
@@ -40,6 +41,13 @@ namespace Andor
         RANDOM_TRACK,
         SINGLE_TRACK,
         IMAGE
+    };
+
+    enum FanMode
+    {   FAN_UNSUPPORTED = -1,
+        FAN_ON_FULL = 0,
+        FAN_ON_LOW,
+        FAN_OFF
     };
 
   class Camera
@@ -134,8 +142,14 @@ namespace Andor
     void getCoolingStatus(std::string& status /Out/);
     void setSpooling(bool flag, Andor::SpoolingMethod method, std::string path, int frameBufferSize);
     void setHighCapacity(Andor::HighCapacityMode mode);
+    void getHighCapacity(Andor::HighCapacityMode& mode /Out/);
     void setGateMode(Andor::GateMode mode);
+    void setFanMode(Andor::FanMode mode);
+    void getFanMode(Andor::FanMode& mode /Out/);
+
     //void setReadMode(Andor::ReadMode mode);
+    void setBaselineClamp(bool enable);
+    void getBaselineClamp(bool& enable /Out/);
     
   };
 

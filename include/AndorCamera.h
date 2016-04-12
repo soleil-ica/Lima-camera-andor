@@ -1,7 +1,7 @@
 //###########################################################################
 // This file is part of LImA, a Library for Image Acquisition
 //
-// Copyright (C) : 2009-2012
+// Copyright (C) : 2009-2016
 // European Synchrotron Radiation Facility
 // BP 220, Grenoble 38043
 // FRANCE
@@ -99,6 +99,7 @@ namespace lima
 
         enum HighCapacityMode
         {
+	    HC_UNSUPPORTED = -1,
             HIGH_SENSITIVITY = 0,
             HIGH_CAPACITY
         };
@@ -121,6 +122,14 @@ namespace lima
             SINGLE_TRACK,
             IMAGE
         };
+
+	enum FanMode
+	{
+	  FAN_UNSUPPORTED = -1,
+	  FAN_ON_FULL = 0,
+	  FAN_ON_LOW,
+	  FAN_OFF,	  
+	};
 
 /*******************************************************************
  * \class Camera
@@ -226,8 +235,13 @@ namespace lima
 	    void getCoolingStatus(std::string& status);    
 	    void setSpooling(bool flag, SpoolingMethod method, std::string path, int frameBufferSize);
 	    void setHighCapacity(HighCapacityMode mode);
+	    void getHighCapacity(HighCapacityMode& mode);
+	    void setFanMode(FanMode mode);
+	    void getFanMode(FanMode& mode);
 	    void setGateMode(GateMode mode);
 	    //void setReadMode(ReadMode mode);
+	    void setBaselineClamp(bool enable);
+	    void getBaselineClamp(bool& enable);
     
 
 	private:
@@ -261,6 +275,9 @@ namespace lima
 	    //- camera stuff 
 	    string                      m_detector_model;
 	    string                      m_detector_type;
+	    int                         m_detector_serial;
+	    FanMode                     m_fan_mode;
+	    HighCapacityMode            m_high_capacity;
     
 	    //- andor SDK stuff
 	    string                      m_config_path;

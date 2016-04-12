@@ -1,7 +1,7 @@
 //###########################################################################
 // This file is part of LImA, a Library for Image Acquisition
 //
-// Copyright (C) : 2009-2012
+// Copyright (C) : 2009-2016
 // European Synchrotron Radiation Facility
 // BP 220, Grenoble 38043
 // FRANCE
@@ -79,9 +79,14 @@ namespace lima
 	    void getCoolingStatus(std::string& status);    
 	    void setSpooling(bool flag, SpoolingMethod method, std::string path, int frameBufferSize);
 	    void setHighCapacity(HighCapacityMode mode);
+	    void getHighCapacity(HighCapacityMode& mode);
+	    void setFanMode(FanMode mode);
+	    void getFanMode(FanMode& mode);
 	    void setGateMode(GateMode mode);
-		//! get the camera object to access it directly from client
-		Camera& getCamera() { return m_cam;}
+	    //! get the camera object to access it directly from client
+	    Camera& getCamera() { return m_cam;}
+	    void setBaselineClamp(bool enable);
+	    void getBaselineClamp(bool& enable);
 
 	private:
 	    Camera&         m_cam;

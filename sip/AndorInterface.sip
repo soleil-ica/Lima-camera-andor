@@ -39,6 +39,11 @@ namespace Andor
     void getCoolingStatus(std::string& status /Out/);
     void setSpooling(bool flag, Andor::SpoolingMethod method, std::string path, int frameBufferSize);
     void setHighCapacity(Andor::HighCapacityMode mode);
+    void getHighCapacity(Andor::HighCapacityMode& mode /Out/);
     void setGateMode(Andor::GateMode mode);
+    void setFanMode(Andor::FanMode mode);
+    void getFanMode(Andor::FanMode& mode /Out/);
+    void setBaselineClamp(bool enable);
+    void getBaselineClamp(bool& enable /Out/);
   };
 };

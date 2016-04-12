@@ -1,7 +1,7 @@
 //###########################################################################
 // This file is part of LImA, a Library for Image Acquisition
 //
-// Copyright (C) : 2009-2012
+// Copyright (C) : 2009-2016
 // European Synchrotron Radiation Facility
 // BP 220, Grenoble 38043
 // FRANCE
@@ -354,6 +354,37 @@ void Interface::setHighCapacity(HighCapacityMode mode)
 }
 
 //-----------------------------------------------------
+// @brief	Gets the High capacity mode
+// @param	mode    mode to set
+//
+//-----------------------------------------------------
+void Interface::getHighCapacity(HighCapacityMode& mode)
+{
+    m_cam.getHighCapacity(mode);
+}
+
+//-----------------------------------------------------
+// @brief	Sets the FAN mode
+// @param	mode    mode to set
+//
+//-----------------------------------------------------
+void Interface::setFanMode(FanMode mode)
+{
+    m_cam.setFanMode(mode);
+}
+
+//-----------------------------------------------------
+// @brief	Gets the Fan mode
+// @param	mode    mode to set
+//
+//-----------------------------------------------------
+void Interface::getFanMode(FanMode& mode)
+{
+    m_cam.getFanMode(mode);
+}
+
+
+//-----------------------------------------------------
 // @brief	Sets the gate mode
 // @param	mode    mode to set
 //
@@ -361,6 +392,27 @@ void Interface::setHighCapacity(HighCapacityMode mode)
 void Interface::setGateMode(GateMode mode)
 {
     m_cam.setGateMode(mode);
+}
+
+//-----------------------------------------------------
+// @brief	Gets the baseline clamp status
+// @param	enable    enable (true) or disable (false)
+//
+//-----------------------------------------------------
+void Interface::getBaselineClamp(bool& enable)
+{
+    m_cam.getBaselineClamp(enable);
+}
+
+
+//-----------------------------------------------------
+// @brief	Sets the gate mode
+// @param	enable    enable (true) or disable (false)
+//
+//-----------------------------------------------------
+void Interface::setBaselineClamp(bool enable)
+{
+    m_cam.setBaselineClamp(enable);
 }
 
 //-----------------------------------------------------

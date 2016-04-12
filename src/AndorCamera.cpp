@@ -1,7 +1,7 @@
 ///###########################################################################
 // This file is part of LImA, a Library for Image Acquisition
 //
-// Copyright (C) : 2009-2015
+// Copyright (C) : 2009-2016
 // European Synchrotron Radiation Facility
 // BP 220, Grenoble 38043
 // FRANCE
@@ -73,6 +73,8 @@ Camera::Camera(const std::string& config_path,int camera_number)
       m_latency_time(0.),
       m_bin(1,1),
       m_shutter_state(false),
+      m_fan_mode(FAN_UNSUPPORTED),
+      m_high_capacity(HC_UNSUPPORTED),
       m_camera_handle(0),
       m_adc_speed_number(0),
       m_adc_speed_max(0),
@@ -146,21 +148,30 @@ Camera::Camera(const std::string& config_path,int camera_number)
         
     // --- Get Camera model
     char	model[AT_CONTROLLER_CARD_MODEL_LEN];
+    int         serial;
     THROW_IF_NOT_SUCCESS(GetHeadModel(model), "Cannot get camera model");
+    THROW_IF_NOT_SUCCESS(GetCameraSerialNumber(&serial), "Cannot get camera serial number");
 
     m_detector_model = model;
+    m_detector_serial = serial;
     m_detector_type = m_andor_type_maps[m_camera_capabilities.ulCameraType];
     
     DEB_TRACE() << "Andor Camera device found:\n" 
-		<< "    * Type  : " << m_detector_type << "("
+		<< "    * Type     : " << m_detector_type << "("
 		<< m_camera_capabilities.ulCameraType <<")\n"
-		<< "    * Model : " << m_detector_model;
-
+		<< "    * Model    : " << m_detector_model <<"\n"
+		<< "    * Serial # : " << m_detector_serial;
 
     
     // --- Initialise deeper parameters of the controller                
     initialiseController();            
-    
+
+    // Fan off and HighCapacity mode as default if supported
+    if (m_camera_capabilities.ulSetFunctions & AC_SETFUNCTION_HIGHCAPACITY)
+      setHighCapacity(HIGH_CAPACITY);
+    if (m_camera_capabilities.ulFeatures & AC_FEATURES_FANCONTROL)
+      setFanMode(FAN_OFF);
+
     //--- Set detector for single image acquisition and get max binning
     m_read_mode = 4;
     THROW_IF_NOT_SUCCESS(SetReadMode(m_read_mode), "Cannot camera read mode");
@@ -192,7 +203,8 @@ Camera::Camera(const std::string& config_path,int camera_number)
     
     // --- Set detector for software single image mode    
     m_trig_mode_maps[IntTrig] = 0;
-    m_trig_mode_maps[ExtTrigSingle] = 1;
+    m_trig_mode_maps[ExtTrigMult] = 1;
+    m_trig_mode_maps[ExtTrigSingle] = 6;
     m_trig_mode_maps[ExtGate] = 7;
     m_trig_mode_maps[IntTrigMult] = 10;  
     setTrigMode(IntTrig);
@@ -548,7 +560,9 @@ void Camera::getDetectorType(string& type)
 void Camera::getDetectorModel(string& type)
 {
     DEB_MEMBER_FUNCT();
-    type = m_detector_model;
+    stringstream ss;
+    ss << ", S/N. "<< m_detector_serial;
+    type = m_detector_model + ss.str();
 }
 
 //-----------------------------------------------------
@@ -578,6 +592,7 @@ bool Camera::checkTrigMode(TrigMode trig_mode)
     case IntTrig:
     case IntTrigMult:
     case ExtTrigSingle:
+    case ExtTrigMult:
     case ExtGate:
 	ret = IsTriggerModeAvailable(m_trig_mode_maps[trig_mode]);
 	switch (ret)
@@ -1002,13 +1017,13 @@ void Camera::initialiseController()
     int is;
     for (is=0; is< m_adc_speed_number; is++)
     {
-        DEB_TRACE() << "    (" << is << ") adc #" << m_adc_speeds[is].adc << ", speed = " 
+        DEB_ALWAYS() << "    (" << is << ") adc #" << m_adc_speeds[is].adc << ", speed = " 
                     << m_adc_speeds[is].speed  << ((is == m_adc_speed_max)? " [max]": "");                        
     }
         
     // --- Set adc / speed to max
     setAdcSpeed(m_adc_speed_max);
-    DEB_TRACE() << "    => Set to " << m_adc_speeds[m_adc_speed_max].speed << "MHz";
+    DEB_ALWAYS() << "    => Set to " << m_adc_speeds[m_adc_speed_max].speed << "MHz";
        
         
     // --- Init VS Speeds 
@@ -1017,29 +1032,29 @@ void Camera::initialiseController()
     DEB_TRACE() << "* Vertical Shift Speed:";
     for (is=0; is<m_vss_number; is++)
     {
-        DEB_TRACE() << "    (" << is << ") speed = " << m_vsspeeds[is] << " us"
+        DEB_ALWAYS() << "    (" << is << ") speed = " << m_vsspeeds[is] << " us"
                     << ((is == m_vss_best)? " [recommended]": "");
     }
         
     // --- Set VS Speed to fasten recommended
     setVsSpeed(m_vss_best);
-    DEB_TRACE() << "    => Set " << m_vsspeeds[m_vss] << "us";
+    DEB_ALWAYS() << "    => Set " << m_vsspeeds[m_vss] << "us";
         
         
     // --- Init Preamp Gain to max
     initPGain();
        
-    DEB_TRACE() << "* Preamp Gain:";
+    DEB_ALWAYS() << "* Preamp Gain:";
         
     for (is=0; is< m_gain_number; is++)
     {
-        DEB_TRACE() << "    (" << is << ") gain = x" << m_preamp_gains[is]
+        DEB_ALWAYS() << "    (" << is << ") gain = x" << m_preamp_gains[is]
                     << ((is == m_gain_max)? " [max]": "");
     }
     
     // --- Set Preamp Gain
     setPGain(m_gain_max);
-    DEB_TRACE() << "    => Set to x" << m_preamp_gains[m_gain];                 
+    DEB_ALWAYS() << "    => Set to x" << m_preamp_gains[m_gain];                 
 }
 //-----------------------------------------------------
 // @brief get possible adc/speed for controller
@@ -1568,7 +1583,18 @@ void Camera::setSpooling(bool flag, SpoolingMethod method, string path, int fram
 
 
 //-----------------------------------------------------
-// @brief	Sets the High capacity mode
+// @brief	get the High capacity mode
+// @param	mode    mode to set
+//
+//-----------------------------------------------------
+void Camera::getHighCapacity(HighCapacityMode& mode)
+{
+    DEB_MEMBER_FUNCT();
+    mode = m_high_capacity ;
+}
+
+//-----------------------------------------------------
+// @brief	set the High capacity mode
 // @param	mode    mode to set
 //
 //-----------------------------------------------------
@@ -1576,8 +1602,45 @@ void Camera::setHighCapacity(HighCapacityMode mode)
 {
     DEB_MEMBER_FUNCT();
 
-    THROW_IF_NOT_SUCCESS(SetHighCapacity((int) mode), "Failed to set high capacity mode");
+    if (m_camera_capabilities.ulSetFunctions & AC_SETFUNCTION_HIGHCAPACITY)
+      {
+	THROW_IF_NOT_SUCCESS(SetHighCapacity((int) mode), "Failed to set high capacity mode");
+      }
+    else 
+	THROW_HW_ERROR(Error) << "HighCapacity not supported for this camera model";
+
+    m_high_capacity = mode;
 }
+
+//-----------------------------------------------------
+// @brief	set the FAN mode ON_FULL/ON_LOW/OFF
+// @param	mode    mode to set
+//
+//-----------------------------------------------------
+void Camera::setFanMode(FanMode mode)
+{
+    DEB_MEMBER_FUNCT();
+    if (m_camera_capabilities.ulFeatures & AC_FEATURES_FANCONTROL)
+      {
+	THROW_IF_NOT_SUCCESS(SetFanMode((int) mode), "Error while setting gate mode");
+      }
+    else
+      THROW_HW_ERROR(Error) << "Fan control not supported for this camera model";
+    m_fan_mode = mode;
+}
+
+//-----------------------------------------------------
+// @brief	get the FAN mode ON_FULL/ON_LOW/OFF
+// @param	mode    mode 
+//
+//-----------------------------------------------------
+void Camera::getFanMode(FanMode& mode)
+{
+    DEB_MEMBER_FUNCT();
+
+    mode  = m_fan_mode;
+}
+
 
 //-----------------------------------------------------
 // @brief	Sets the gate mode
@@ -1590,6 +1653,9 @@ void Camera::setGateMode(GateMode mode)
 
     THROW_IF_NOT_SUCCESS(SetGateMode((int) mode), "Error while setting gate mode");
 }
+
+
+
 
 //-----------------------------------------------------
 // @brief	Sets the read mode
@@ -1608,6 +1674,42 @@ void Camera::setGateMode(GateMode mode)
 //        THROW_HW_ERROR(Error) << "Failed to set read mode";
 //    }
 //}
+
+
+//-----------------------------------------------------
+// @brief	set enable (true) or disable (false) the baseline clamping
+// @param	enable true or false    
+//
+//-----------------------------------------------------
+void Camera::setBaselineClamp(bool enable)
+{
+    DEB_MEMBER_FUNCT();
+    if (m_camera_capabilities.ulSetFunctions & AC_SETFUNCTION_BASELINECLAMP)
+      {
+	THROW_IF_NOT_SUCCESS(SetBaselineClamp((enable)?1:0), "Error while setting gate mode");
+      }
+    else
+      THROW_HW_ERROR(Error) << "Baseline Clamp control not supported for this camera model";
+}
+
+//-----------------------------------------------------
+// @brief	get baseline clamp status
+// @param	enable true or false
+//
+//-----------------------------------------------------
+void Camera::getBaselineClamp(bool& enable)
+{
+    DEB_MEMBER_FUNCT();
+    int state;
+    if (m_camera_capabilities.ulFeatures & AC_FEATURES_FANCONTROL)
+      {
+	THROW_IF_NOT_SUCCESS(GetBaselineClamp(&state), "Error while setting gate mode");
+      }
+    else
+      THROW_HW_ERROR(Error) << "Baseline Clamp  control not supported for this camera model";
+    enable = (state==1)? true: false;
+}
+
 
 //-----------------------------------------------------
 // @brief just build a map of error codes
