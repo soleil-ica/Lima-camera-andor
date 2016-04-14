@@ -121,14 +121,21 @@ namespace Andor
 
     void initialiseController();
     void initAdcSpeed();
-    void setAdcSpeed(int adc);
-    void getAdcSpeed(int& adc /Out/);
+    void setAdcSpeed(int index);
+    void getAdcSpeed(int& index /Out/);
     void getAdcSpeedInMhz(float& adc /Out/);
+    void getAdcSpeedMaxIndex(int &max_index /Out/);
+    void getAdcSpeedPaireString(int index, std::string& paire /Out/);
     void initVsSpeed();
     void setVsSpeed(int vss);
     void getVsSpeed(int& vss /Out/);
+    void getVsSpeedMaxIndex(int& max_index /Out/);
+    void getVsSpeedString(int index, std::string& speed /Out/);
     void initPGain();
     void setPGain(int gain);
+    void getPGainMaxIndex(int& max_index /Out/);
+    void getPGainString(int index, std::string& pgain /Out/);
+
     void getPGain(int& gain /Out/);
     void setFastExtTrigger(bool flag);
     void getFastExtTrigger(bool& flag /Out/);

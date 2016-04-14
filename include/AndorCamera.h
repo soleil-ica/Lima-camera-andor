@@ -75,6 +75,7 @@
 #include "lima/HwBufferMgr.h"
 
 #include <ostream>
+#include <string>
 
 using namespace std;
 
@@ -214,15 +215,21 @@ namespace lima
 	    // -- andor specific
 	    void initialiseController();
 	    void initAdcSpeed();
-	    void setAdcSpeed(int adc);
-	    void getAdcSpeed(int& adc);
-	    void getAdcSpeedInMhz(float& adc);
+	    void setAdcSpeed(int index);
+	    void getAdcSpeed(int& index);
+	    void getAdcSpeedInMhz(float& speed);
+	    void getAdcSpeedMaxIndex(int &max_index);
+	    void getAdcSpeedPaireString(int index, string& paire);
 	    void initVsSpeed();
 	    void setVsSpeed(int vss);
 	    void getVsSpeed(int& vss);
+	    void getVsSpeedMaxIndex(int& max_index);
+	    void getVsSpeedString(int index, string& speed);
 	    void initPGain();
 	    void setPGain(int gain);
 	    void getPGain(int& gain);
+	    void getPGainMaxIndex(int& max_index);
+	    void getPGainString(int index, string& pgain);
 	    void setFastExtTrigger(bool flag);
 	    void getFastExtTrigger(bool& flag);
 	    void setShutterLevel(int level);
@@ -242,7 +249,6 @@ namespace lima
 	    //void setReadMode(ReadMode mode);
 	    void setBaselineClamp(bool enable);
 	    void getBaselineClamp(bool& enable);
-    
 
 	private:
 	    class _AcqThread;
@@ -321,7 +327,9 @@ namespace lima
 #else
 	    int                         m_ring_buffer_size;                
 #endif
-	    map<int, string>            m_andor_type_maps;            
+	    map<int, string>            m_andor_type_maps;
+	    map<int, string>            m_adcspeed_maps;
+	    map<int, string>            m_vsspeed_maps;
 	};
     } // namespace Andor
 } // namespace lima

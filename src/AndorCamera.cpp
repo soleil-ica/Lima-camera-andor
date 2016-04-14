@@ -1097,6 +1097,9 @@ void Camera::initAdcSpeed()
 	    if (m_adc_speeds[is].speed > speedMax) {
 		speedMax= m_adc_speeds[is].speed;
 		m_adc_speed_max= is;
+		stringstream ss;
+		ss << "ADC" << m_adc_speeds[is].adc << "_" << m_adc_speeds[is].speed << "MHZ";
+		m_adcspeed_maps[is] = ss.str();
 	    }
 	    is++;
 	}
@@ -1108,19 +1111,19 @@ void Camera::initAdcSpeed()
 // @param	adc pair adc/speed index (if =-1, set to max speed)
 //
 //-----------------------------------------------------
-void Camera::setAdcSpeed(int adc)
+void Camera::setAdcSpeed(int index)
 {
     DEB_MEMBER_FUNCT();
     int is;
     
     // -- Initialise ad speed
-    if ((adc == -1) || (adc > m_adc_speed_number))
+    if ((index == -1) || (index > m_adc_speed_number-1))
     {
         is = m_adc_speed_max;
     }
     else
     {
-        is  = adc;
+        is  = index;
     }
     THROW_IF_NOT_SUCCESS(SetADChannel(m_adc_speeds[is].adc), "Failed to set ADC channel");
     THROW_IF_NOT_SUCCESS(SetHSSpeed(0, m_adc_speeds[is].hss), "Failed to set HSS");
@@ -1135,9 +1138,9 @@ void Camera::setAdcSpeed(int adc)
 // @param	adc index
 //
 //-----------------------------------------------------
-void Camera::getAdcSpeed(int& adc)
+void Camera::getAdcSpeed(int& index)
 {
-    adc = m_adc;
+    index = m_adc;
 }
 
 //-----------------------------------------------------
@@ -1145,11 +1148,42 @@ void Camera::getAdcSpeed(int& adc)
 // @param	adc frequency
 //
 //-----------------------------------------------------
-void Camera::getAdcSpeedInMhz(float& adc)
+void Camera::getAdcSpeedInMhz(float& speed)
 {
-    adc = m_adc_speeds[m_adc].speed;
+    speed = m_adc_speeds[m_adc].speed;
 }
 
+//-----------------------------------------------------
+// @brief	get max number of adc/speed paire
+// @param	max_index
+//
+//-----------------------------------------------------
+void Camera::getAdcSpeedMaxIndex(int& max_index)
+{
+  max_index = m_adc_speed_number;
+}
+
+//-----------------------------------------------------
+// @brief	get ADC/Speed paire as a string for a given index
+// @param	index
+//
+//-----------------------------------------------------
+void Camera::getAdcSpeedPaireString(int index,string& paire)
+{
+  int is;
+
+  if ((index == -1) || (index >= m_adc_speed_number))
+  { 
+    is = m_adc_speed_max;
+  }
+  else
+  {
+    is = index;
+  }
+  stringstream ss;
+  ss << "ADC" << m_adc_speeds[is].adc << "_" << m_adc_speeds[is].speed << "MHZ";
+  paire = ss.str();
+}
 //-----------------------------------------------------
 // @brief get possible VSS (vertical shift speed) for controller
 //
@@ -1172,6 +1206,9 @@ void Camera::initVsSpeed()
     for (ivss=0; ivss<m_vss_number; ivss++)
     {
         THROW_IF_NOT_SUCCESS(GetVSSpeed(ivss, &m_vsspeeds[ivss]), "Cannot get VSS value");
+	stringstream ss;
+	ss << m_vsspeeds[ivss] << "USEC";
+	m_vsspeed_maps[ivss] = ss.str();
     }
 
     // --- get recommended VSS value
@@ -1190,18 +1227,18 @@ void Camera::initVsSpeed()
 // @param	vss index (if =-1, set to recommended)
 //
 //-----------------------------------------------------
-void Camera::setVsSpeed(int vss) 
+void Camera::setVsSpeed(int index) 
 {
     DEB_MEMBER_FUNCT();
     int is;
 
-    if ((vss == -1)||(vss > m_vss_number))
+    if ((index == -1)||(index >= m_vss_number))
     {
 	is = m_vss_best;
     } 
     else
     {
-	is = vss;
+	is = index;
     }
     THROW_IF_NOT_SUCCESS(SetVSSpeed(is), "Failed to set VS speed");
     m_vss = is;
@@ -1214,9 +1251,30 @@ void Camera::setVsSpeed(int vss)
 // @param	vss index
 //
 //-----------------------------------------------------
-void Camera::getVsSpeed(int& vss) 
+void Camera::getVsSpeed(int& index) 
 {
-    vss = m_vss;
+    index = m_vss;
+}
+
+//-----------------------------------------------------
+// @brief	get Vertical Shift Speed
+// @param	vss index
+//
+//-----------------------------------------------------
+void Camera::getVsSpeedString(int index, string& speed)
+{
+  DEB_MEMBER_FUNCT();
+  speed = m_vsspeed_maps[index];
+}
+
+//-----------------------------------------------------
+// @brief	get Vertical Shift Speed max index value
+// @param	index
+//
+//-----------------------------------------------------
+void Camera::getVsSpeedMaxIndex(int& max_index)
+{
+  max_index = m_vss_number;
 }
 
 //-----------------------------------------------------
@@ -1252,23 +1310,23 @@ void Camera::initPGain()
 // @param	gain preamp gain index
 //
 //-----------------------------------------------------
-void Camera::setPGain(int gain) 
+void Camera::setPGain(int index) 
 {
     DEB_MEMBER_FUNCT();
     int ig;
 
-    if (gain==-1) 
+    if (index==-1) 
     {
 	ig= m_gain_max;
     }
     else
     {
-        if (gain<-1 || gain>=m_gain_number)
+        if (index<-1 || index>= m_gain_number)
         {
 	    DEB_ERROR() << "Invalid gain index range is" << "[0," << m_gain_number-1 << "] or -1 for max gain";
 	    THROW_HW_ERROR(Error) << "Invalid gain index range is" << "[0," << m_gain_number-1 << "] or -1 for max gain"; 
 	}
-	ig= gain;
+	ig= index;
     }
 
     THROW_IF_NOT_SUCCESS(SetPreAmpGain(ig), "Failed to set Preamp Gain");
@@ -1282,9 +1340,24 @@ void Camera::setPGain(int gain)
 // @param	gain preamp gain index
 //
 //-----------------------------------------------------
-void Camera::getPGain(int& gain) 
+void Camera::getPGain(int& index) 
 {
-    gain = m_gain;
+    DEB_MEMBER_FUNCT();
+    index = m_gain;
+}
+
+void Camera::getPGainMaxIndex(int& max_index)
+{
+    DEB_MEMBER_FUNCT();
+    max_index = m_gain_number;
+}
+
+void Camera::getPGainString(int index, string& pgain)
+{
+    DEB_MEMBER_FUNCT();
+    stringstream ss;
+    ss <<  "X" << m_preamp_gains[index];
+    pgain = ss.str();
 }
 
 //-----------------------------------------------------

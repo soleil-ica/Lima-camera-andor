@@ -21,12 +21,18 @@ namespace Andor
     virtual void 	getStatus(StatusType& status /Out/);
     virtual int 	getNbHwAcquiredFrames();
 
-    void setAdcSpeed(int adc);
-    void getAdcSpeed(int& adc /Out/);
-    void setVsSpeed(int vss);
-    void getVsSpeed(int& vss /Out/);
-    void setPGain(int gain);
-    void getPGain(int& gain /Out/);
+    void setAdcSpeed(int index);
+    void getAdcSpeed(int& index /Out/);
+    void getAdcSpeedMaxIndex(int &max_index /Out/);
+    void getAdcSpeedPaireString(int index, std::string& paire /Out/);
+    void setVsSpeed(int index);
+    void getVsSpeed(int& index /Out/);
+    void getVsSpeedMaxIndex(int& max_index /Out/);
+    void getVsSpeedString(int index, std::string& speed /Out/);
+    void setPGain(int index);
+    void getPGain(int&index);
+    void getPGainMaxIndex(int& max_index /Out/);
+    void getPGainString(int index, std::string& pgain /Out/);
     void setFastExtTrigger(bool flag);
     void getFastExtTrigger(bool& flag /Out/);
     void setShutterLevel(int level);
