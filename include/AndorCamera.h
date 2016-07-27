@@ -131,6 +131,13 @@ namespace lima
 	  FAN_ON_LOW,
 	  FAN_OFF,	  
 	};
+	
+	enum BaselineClamp
+	{
+	  BLCLAMP_UNSUPPORTED = -1,
+	  BLCLAMP_ENABLED = 0,
+	  BLCLAMP_DISABLED = 1
+	};
 
 /*******************************************************************
  * \class Camera
@@ -247,8 +254,8 @@ namespace lima
 	    void getFanMode(FanMode& mode);
 	    void setGateMode(GateMode mode);
 	    //void setReadMode(ReadMode mode);
-	    void setBaselineClamp(bool enable);
-	    void getBaselineClamp(bool& enable);
+	    void setBaselineClamp(BaselineClamp mode);
+	    void getBaselineClamp(BaselineClamp& mode);
 
 	private:
 	    class _AcqThread;
@@ -284,6 +291,7 @@ namespace lima
 	    int                         m_detector_serial;
 	    FanMode                     m_fan_mode;
 	    HighCapacityMode            m_high_capacity;
+	    BaselineClamp               m_baseline_clamp;
     
 	    //- andor SDK stuff
 	    string                      m_config_path;

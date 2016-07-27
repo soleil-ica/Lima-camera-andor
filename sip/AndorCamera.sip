@@ -50,6 +50,13 @@ namespace Andor
         FAN_OFF
     };
 
+    enum BaselineClamp
+    {
+         BLCLAMP_UNSUPPORTED = -1,
+	 BLCLAMP_ENABLED = 0,
+	 BLCLAMP_DISABLED = 1
+    };
+
   class Camera
   {
 %TypeHeaderCode
@@ -155,8 +162,8 @@ namespace Andor
     void getFanMode(Andor::FanMode& mode /Out/);
 
     //void setReadMode(Andor::ReadMode mode);
-    void setBaselineClamp(bool enable);
-    void getBaselineClamp(bool& enable /Out/);
+    void setBaselineClamp(Andor::BaselineClamp mode);
+    void getBaselineClamp(Andor::BaselineClamp& mode /Out/);
     
   };
 

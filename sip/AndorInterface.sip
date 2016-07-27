@@ -49,7 +49,7 @@ namespace Andor
     void setGateMode(Andor::GateMode mode);
     void setFanMode(Andor::FanMode mode);
     void getFanMode(Andor::FanMode& mode /Out/);
-    void setBaselineClamp(bool enable);
-    void getBaselineClamp(bool& enable /Out/);
+    void setBaselineClamp(Andor::BaselineClamp mode);
+    void getBaselineClamp(Andor::BaselineClamp& mode /Out/);
   };
 };

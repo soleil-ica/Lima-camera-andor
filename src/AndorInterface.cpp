@@ -395,24 +395,24 @@ void Interface::setGateMode(GateMode mode)
 }
 
 //-----------------------------------------------------
-// @brief	Gets the baseline clamp status
-// @param	enable    enable (true) or disable (false)
+// @brief	get baseline clamp mode
+// @param	BLCLAMP_UNSUPPORTED, BLCLAMP_ON or BLCLAMP_OFF
 //
 //-----------------------------------------------------
-void Interface::getBaselineClamp(bool& enable)
+void Interface::getBaselineClamp(BaselineClamp& mode)
 {
-    m_cam.getBaselineClamp(enable);
+    m_cam.getBaselineClamp(mode);
 }
 
 
 //-----------------------------------------------------
-// @brief	Sets the gate mode
-// @param	enable    enable (true) or disable (false)
+// @brief	set on  or off the baseline clamping
+// @param	BLCLAMP_OFF or BLCLAMP_ON    
 //
 //-----------------------------------------------------
-void Interface::setBaselineClamp(bool enable)
+void Interface::setBaselineClamp(BaselineClamp mode)
 {
-    m_cam.setBaselineClamp(enable);
+    m_cam.setBaselineClamp(mode);
 }
 
 //-----------------------------------------------------

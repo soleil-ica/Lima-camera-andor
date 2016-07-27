@@ -75,6 +75,7 @@ Camera::Camera(const std::string& config_path,int camera_number)
       m_shutter_state(false),
       m_fan_mode(FAN_UNSUPPORTED),
       m_high_capacity(HC_UNSUPPORTED),
+      m_baseline_clamp(BLCLAMP_UNSUPPORTED),
       m_camera_handle(0),
       m_adc_speed_number(0),
       m_adc_speed_max(0),
@@ -166,11 +167,13 @@ Camera::Camera(const std::string& config_path,int camera_number)
     // --- Initialise deeper parameters of the controller                
     initialiseController();            
 
-    // Fan off and HighCapacity mode as default if supported
+    // Fan off, HighCapacity mode and Baseline clamping off as default if supported
     if (m_camera_capabilities.ulSetFunctions & AC_SETFUNCTION_HIGHCAPACITY)
       setHighCapacity(HIGH_CAPACITY);
     if (m_camera_capabilities.ulFeatures & AC_FEATURES_FANCONTROL)
       setFanMode(FAN_OFF);
+    if (m_camera_capabilities.ulSetFunctions & AC_SETFUNCTION_BASELINECLAMP)
+      setBaselineClamp(BLCLAMP_DISABLED);
 
     //--- Set detector for single image acquisition and get max binning
     m_read_mode = 4;
@@ -1750,37 +1753,31 @@ void Camera::setGateMode(GateMode mode)
 
 
 //-----------------------------------------------------
-// @brief	set enable (true) or disable (false) the baseline clamping
-// @param	enable true or false    
+// @brief	set on  or off the baseline clamping
+// @param	BLCLAMP_OFF or BLCLAMP_ON    
 //
 //-----------------------------------------------------
-void Camera::setBaselineClamp(bool enable)
+void Camera::setBaselineClamp(BaselineClamp mode)
 {
     DEB_MEMBER_FUNCT();
     if (m_camera_capabilities.ulSetFunctions & AC_SETFUNCTION_BASELINECLAMP)
       {
-	THROW_IF_NOT_SUCCESS(SetBaselineClamp((enable)?1:0), "Error while setting gate mode");
+	THROW_IF_NOT_SUCCESS(SetBaselineClamp(mode), "Error while setting Baseline Clamp");
       }
     else
       THROW_HW_ERROR(Error) << "Baseline Clamp control not supported for this camera model";
+    m_baseline_clamp = mode;
 }
 
 //-----------------------------------------------------
-// @brief	get baseline clamp status
-// @param	enable true or false
+// @brief	get baseline clamp mode
+// @param	BLCLAMP_UNSUPPORTED, BLCLAMP_ON or BLCLAMP_OFF
 //
 //-----------------------------------------------------
-void Camera::getBaselineClamp(bool& enable)
+void Camera::getBaselineClamp(BaselineClamp& mode)
 {
     DEB_MEMBER_FUNCT();
-    int state;
-    if (m_camera_capabilities.ulFeatures & AC_FEATURES_FANCONTROL)
-      {
-	THROW_IF_NOT_SUCCESS(GetBaselineClamp(&state), "Error while setting gate mode");
-      }
-    else
-      THROW_HW_ERROR(Error) << "Baseline Clamp  control not supported for this camera model";
-    enable = (state==1)? true: false;
+    mode = m_baseline_clamp;
 }
 
 

@@ -91,8 +91,8 @@ namespace lima
 	    void setGateMode(GateMode mode);
 	    //! get the camera object to access it directly from client
 	    Camera& getCamera() { return m_cam;}
-	    void setBaselineClamp(bool enable);
-	    void getBaselineClamp(bool& enable);
+	    void setBaselineClamp(BaselineClamp mode);
+	    void getBaselineClamp(BaselineClamp& mode);
 
 	private:
 	    Camera&         m_cam;

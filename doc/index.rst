@@ -12,7 +12,7 @@ Andor Technology manufactuer offers a large catalogue of scientific cameras. Cov
 Andor is providing a unique Software Development Tool (SDK) for both Windows and Linux, supporting different interface buses such as USB, CameraLink and also some specific acquisition PCI board.
 
 The Lima module as been tested only with this cameras models:
-  - IKon-M (USB interface, Linux OS)
+  - IKon-M and IKon-L (USB interface, Linux OS debian 6)
   - IKon-L (USB interface, Windows XP - 32bits)
 
 Prerequisite Linux OS
@@ -93,6 +93,15 @@ can be applied with -1 as passed value:
 
  set/getADCSpeed()
 
+Some other methods are available but they can not be supported depending on which camera model you are using:
+ 
+ set/getHighCapacity()
+
+ set/getFanMode()
+
+ set/getBaselineClamp()
+
+The above parameters, only support enumerate type for values.
 
 Std capabilites
 ................
@@ -151,7 +160,7 @@ This is a python code example for a simple test:
 
   cam = Andor.Camera("/usr/local/etc/andor", 0)
   hwint = Andor.Interface(cam)
-  ct = Core.control(hwint)
+  ct = Core.CtControl(hwint)
 
   acq = ct.acquisition()
 
@@ -160,7 +169,11 @@ This is a python code example for a simple test:
   hwint.setCooler(True)
   .... wait here for cooling
 
+  # set some low level configuration
   hwint.setPGain(2)
+  hwint.setFanMode(FAN_ON_FULL)
+  hwint.setHighCapacity(HIGH_SENSITIVITY)
+  hwint.setBaselineClamp(BLCLAMP_ENABLED)
 
 
   # setting new file parameters and autosaving mode
@@ -195,6 +208,14 @@ This is a python code example for a simple test:
   ct.prepareAcq()
   ct.startAcq()
 
-  
+  # wait for last image (#9) ready
+  lastimg = control.getStatus().ImageCounters.LastImageReady
+  while lastimg !=9:
+    time.sleep(1)
+    lastimg = control.getStatus().ImageCounters.LastImageReady
+ 
+  # read a image
+  im0 = control.ReadImage(0)
+
 
   
