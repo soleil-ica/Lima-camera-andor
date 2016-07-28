@@ -53,8 +53,8 @@ namespace Andor
     enum BaselineClamp
     {
          BLCLAMP_UNSUPPORTED = -1,
-	 BLCLAMP_ENABLED = 0,
-	 BLCLAMP_DISABLED = 1
+	 BLCLAMP_DISABLED = 0,
+	 BLCLAMP_ENABLED = 1
     };
 
   class Camera
