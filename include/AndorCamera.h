@@ -308,8 +308,8 @@ namespace lima
     
 	    Adc*                        m_adc_speeds;
 	    int                         m_adc_speed_number;
-	    int                         m_adc_speed_max;
-	    int                         m_adc;
+	    int                         m_adc_speed_max_index;
+	    int                         m_adc_speed_index;
 	    int                         m_vss_number;
 	    float*                      m_vsspeeds;
 	    int                         m_vss_best;

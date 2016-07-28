@@ -24,6 +24,8 @@
 #include <iostream>
 #include <string>
 #include <math.h>
+#include <unistd.h>
+
 #include "AndorCamera.h"
 
 using namespace lima;
@@ -78,8 +80,8 @@ Camera::Camera(const std::string& config_path,int camera_number)
       m_baseline_clamp(BLCLAMP_UNSUPPORTED),
       m_camera_handle(0),
       m_adc_speed_number(0),
-      m_adc_speed_max(0),
-      m_adc(-1),
+      m_adc_speed_max_index(0),
+      m_adc_speed_index(-1),
       m_vss_best(0),
       m_vss(-1),
       m_gain_number(0),
@@ -521,7 +523,7 @@ void Camera::getImageType(ImageType& type)
     // --- command to select a different ADC if the detector has several.
 
     
-    THROW_IF_NOT_SUCCESS(GetBitDepth(m_adc, &bits), "Cannot get detector bit depth");
+    THROW_IF_NOT_SUCCESS(GetBitDepth(m_adc_speeds[m_adc_speed_index].adc, &bits), "Cannot get detector bit depth");
     // --- not clear from documentation with bit depth are possible
     // --- according to the AndorCapabilites structure cameras can support more image type
     // --- with color ones as well.
@@ -1021,12 +1023,12 @@ void Camera::initialiseController()
     for (is=0; is< m_adc_speed_number; is++)
     {
         DEB_ALWAYS() << "    (" << is << ") adc #" << m_adc_speeds[is].adc << ", speed = " 
-                    << m_adc_speeds[is].speed  << ((is == m_adc_speed_max)? " [max]": "");                        
+                    << m_adc_speeds[is].speed  << ((is == m_adc_speed_max_index)? " [max]": "");                        
     }
         
     // --- Set adc / speed to max
-    setAdcSpeed(m_adc_speed_max);
-    DEB_ALWAYS() << "    => Set to " << m_adc_speeds[m_adc_speed_max].speed << "MHz";
+    setAdcSpeed(m_adc_speed_max_index);
+    DEB_ALWAYS() << "    => Set to " << m_adc_speeds[m_adc_speed_max_index].speed << "MHz";
        
         
     // --- Init VS Speeds 
@@ -1099,7 +1101,7 @@ void Camera::initAdcSpeed()
 
 	    if (m_adc_speeds[is].speed > speedMax) {
 		speedMax= m_adc_speeds[is].speed;
-		m_adc_speed_max= is;
+		m_adc_speed_max_index= is;
 		stringstream ss;
 		ss << "ADC" << m_adc_speeds[is].adc << "_" << m_adc_speeds[is].speed << "MHZ";
 		m_adcspeed_maps[is] = ss.str();
@@ -1122,7 +1124,7 @@ void Camera::setAdcSpeed(int index)
     // -- Initialise ad speed
     if ((index == -1) || (index > m_adc_speed_number-1))
     {
-        is = m_adc_speed_max;
+        is = m_adc_speed_max_index;
     }
     else
     {
@@ -1130,7 +1132,7 @@ void Camera::setAdcSpeed(int index)
     }
     THROW_IF_NOT_SUCCESS(SetADChannel(m_adc_speeds[is].adc), "Failed to set ADC channel");
     THROW_IF_NOT_SUCCESS(SetHSSpeed(0, m_adc_speeds[is].hss), "Failed to set HSS");
-    m_adc = is;
+    m_adc_speed_index = is;
     
     DEB_TRACE() << "ADC speed set to " << m_adc_speeds[is].speed << " MHz";
 }
@@ -1143,7 +1145,7 @@ void Camera::setAdcSpeed(int index)
 //-----------------------------------------------------
 void Camera::getAdcSpeed(int& index)
 {
-    index = m_adc;
+    index = m_adc_speed_index;
 }
 
 //-----------------------------------------------------
@@ -1153,7 +1155,7 @@ void Camera::getAdcSpeed(int& index)
 //-----------------------------------------------------
 void Camera::getAdcSpeedInMhz(float& speed)
 {
-    speed = m_adc_speeds[m_adc].speed;
+    speed = m_adc_speeds[m_adc_speed_index].speed;
 }
 
 //-----------------------------------------------------
@@ -1177,7 +1179,7 @@ void Camera::getAdcSpeedPaireString(int index,string& paire)
 
   if ((index == -1) || (index >= m_adc_speed_number))
   { 
-    is = m_adc_speed_max;
+    is = m_adc_speed_max_index;
   }
   else
   {
