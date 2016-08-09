@@ -156,7 +156,7 @@ This is a python code example for a simple test:
 .. code-block:: python
 
   from Lima import Andor
-  from lima impor Core
+  from lima import Core
 
   cam = Andor.Camera("/usr/local/etc/andor", 0)
   hwint = Andor.Interface(cam)
@@ -171,9 +171,12 @@ This is a python code example for a simple test:
 
   # set some low level configuration
   hwint.setPGain(2)
-  hwint.setFanMode(FAN_ON_FULL)
-  hwint.setHighCapacity(HIGH_SENSITIVITY)
-  hwint.setBaselineClamp(BLCLAMP_ENABLED)
+  hwint.setCooler(True)
+  hwint.setFanMode(cam.FAN_ON_FULL)
+  hwint.setHighCapacity(cam.HIGH_SENSITIVITY)
+  hwint.setBaselineClamp(cam.BLCLAMP_ENABLED)
+  hwint.setFastExtTrigger(False)
+  hwint.setShutterLevel(1)
 
 
   # setting new file parameters and autosaving mode
@@ -209,13 +212,13 @@ This is a python code example for a simple test:
   ct.startAcq()
 
   # wait for last image (#9) ready
-  lastimg = control.getStatus().ImageCounters.LastImageReady
+  lastimg = ct.getStatus().ImageCounters.LastImageReady
   while lastimg !=9:
     time.sleep(1)
-    lastimg = control.getStatus().ImageCounters.LastImageReady
+    lastimg = ct.getStatus().ImageCounters.LastImageReady
  
-  # read a image
-  im0 = control.ReadImage(0)
+  # read the first image
+  im0 = ct.ReadImage(0)
 
 
   
