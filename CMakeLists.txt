@@ -54,33 +54,6 @@ ENDIF()
 
 IF(COMPILE_SIP)
     SET(NAME "andor")
-    SET(INCLUDES)
-    FILE(GLOB sipfiles RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/sip" "${CMAKE_CURRENT_SOURCE_DIR}/sip/*.sip")
-    FOREACH(sipfile ${sipfiles})
-        SET(INCLUDES 
-        "${INCLUDES} 
-        %Include ${sipfile}")
-    ENDFOREACH()
-
-    CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/sip/limamodules.sip.in sip/limaandor.sip)
-    SET(SIP_CONCAT_PARTS 1)
-    SET(SIP_INCLUDES ${SIP_INCLUDES}
-        "${CMAKE_SOURCE_DIR}/third-party/Processlib/sip"
-        "${CMAKE_BINARY_DIR}/sip/core"
-        "${CMAKE_SOURCE_DIR}/third-party/Processlib/tasks/sip"
-        "${CMAKE_SOURCE_DIR}/common/sip"
-        "${CMAKE_SOURCE_DIR}/hardware/sip"
-        "${CMAKE_SOURCE_DIR}/control/sip"
-        "${CMAKE_SOURCE_DIR}/control/software_operation/sip"
-        "${CMAKE_CURRENT_SOURCE_DIR}/sip")
-    set(SIP_DISABLE_FEATURES WITH_CONFIG)
-    set(SIP_CHECK_EXC ON)
-    ADD_SIP_PYTHON_MODULE(limaandor ${CMAKE_CURRENT_BINARY_DIR}/sip/limaandor.sip)
-    TARGET_INCLUDE_DIRECTORIES(python_module_limaandor PRIVATE
-                               ${PYTHON_INCLUDE_DIRS}
-                               "${CMAKE_SOURCE_DIR}/sip"
-                               "${CMAKE_SOURCE_DIR}/sip/core")
-    TARGET_LINK_LIBRARIES(python_module_limaandor limaandor)
-
+	include(CameraRunSIP)
     INSTALL(FILES python/__init__.py DESTINATION "${PYTHON_SITE_PACKAGES_DIR}/Lima/Andor")
 ENDIF()
