@@ -71,7 +71,7 @@ else()
 	install(TARGETS lima${NAME} LIBRARY DESTINATION lib)
 endif()
 
-if(COMPILE_SIP)
+if(LIMA_ENABLE_PYTHON)
 	include(CameraRunSIP)
     install(FILES python/__init__.py DESTINATION "${PYTHON_SITE_PACKAGES_DIR}/Lima/Andor")
 endif()
