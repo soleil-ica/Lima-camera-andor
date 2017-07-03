@@ -63,7 +63,7 @@ endif()
 target_link_libraries(lima${NAME} limacore)
 target_link_libraries(lima${NAME} ${ANDOR_LIB})
 
-include(CameraVERSION)
+limatools_set_library_soversion(lima${NAME} "VERSION")
 if(WIN32)
 	set_target_properties(lima${NAME} PROPERTIES PREFIX "lib")
 	install(TARGETS lima${NAME} DESTINATION lib)
