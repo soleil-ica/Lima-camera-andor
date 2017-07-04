@@ -61,7 +61,11 @@ else()
 endif()
 
 target_link_libraries(lima${NAME} limacore)
-target_link_libraries(lima${NAME} ${ANDOR_LIB})
+if(WIN32)
+	target_link_libraries(lima${NAME} ${ANDOR_ATMCD64M_LIB})
+else()
+	target_link_libraries(lima${NAME} ${ANDOR_LIB})
+endif()
 
 limatools_set_library_soversion(lima${NAME} "VERSION")
 if(WIN32)
