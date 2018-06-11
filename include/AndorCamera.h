@@ -1,7 +1,7 @@
 //###########################################################################
 // This file is part of LImA, a Library for Image Acquisition
 //
-// Copyright (C) : 2009-2012
+// Copyright (C) : 2009-2016
 // European Synchrotron Radiation Facility
 // BP 220, Grenoble 38043
 // FRANCE
@@ -75,6 +75,7 @@
 #include "lima/HwBufferMgr.h"
 
 #include <ostream>
+#include <string>
 
 using namespace std;
 
@@ -99,6 +100,7 @@ namespace lima
 
         enum HighCapacityMode
         {
+	    HC_UNSUPPORTED = -1,
             HIGH_SENSITIVITY = 0,
             HIGH_CAPACITY
         };
@@ -121,6 +123,21 @@ namespace lima
             SINGLE_TRACK,
             IMAGE
         };
+
+	enum FanMode
+	{
+	  FAN_UNSUPPORTED = -1,
+	  FAN_ON_FULL = 0,
+	  FAN_ON_LOW,
+	  FAN_OFF,	  
+	};
+	
+	enum BaselineClamp
+	{
+	  BLCLAMP_UNSUPPORTED = -1,
+	  BLCLAMP_DISABLED = 0,
+	  BLCLAMP_ENABLED = 1
+	};
 
 /*******************************************************************
  * \class Camera
@@ -203,19 +220,23 @@ namespace lima
 	    void reset();
 
 	    // -- andor specific
-	    void _mapAndorError();
-	    bool andorError(unsigned int code);
 	    void initialiseController();
 	    void initAdcSpeed();
-	    void setAdcSpeed(int adc);
-	    void getAdcSpeed(int& adc);
-        void getAdcSpeedInMhz(float& adc);
+	    void setAdcSpeed(int index);
+	    void getAdcSpeed(int& index);
+	    void getAdcSpeedInMhz(float& speed);
+	    void getAdcSpeedMaxIndex(int &max_index);
+	    void getAdcSpeedPaireString(int index, string& paire);
 	    void initVsSpeed();
 	    void setVsSpeed(int vss);
 	    void getVsSpeed(int& vss);
+	    void getVsSpeedMaxIndex(int& max_index);
+	    void getVsSpeedString(int index, string& speed);
 	    void initPGain();
 	    void setPGain(int gain);
 	    void getPGain(int& gain);
+	    void getPGainMaxIndex(int& max_index);
+	    void getPGainString(int index, string& pgain);
 	    void setFastExtTrigger(bool flag);
 	    void getFastExtTrigger(bool& flag);
 	    void setShutterLevel(int level);
@@ -228,9 +249,13 @@ namespace lima
 	    void getCoolingStatus(std::string& status);    
 	    void setSpooling(bool flag, SpoolingMethod method, std::string path, int frameBufferSize);
 	    void setHighCapacity(HighCapacityMode mode);
+	    void getHighCapacity(HighCapacityMode& mode);
+	    void setFanMode(FanMode mode);
+	    void getFanMode(FanMode& mode);
 	    void setGateMode(GateMode mode);
 	    //void setReadMode(ReadMode mode);
-    
+	    void setBaselineClamp(BaselineClamp mode);
+	    void getBaselineClamp(BaselineClamp& mode);
 
 	private:
 	    class _AcqThread;
@@ -263,14 +288,16 @@ namespace lima
 	    //- camera stuff 
 	    string                      m_detector_model;
 	    string                      m_detector_type;
+	    int                         m_detector_serial;
+	    FanMode                     m_fan_mode;
+	    HighCapacityMode            m_high_capacity;
+	    BaselineClamp               m_baseline_clamp;
     
 	    //- andor SDK stuff
 	    string                      m_config_path;
 	    int                         m_camera_number;
 	    at_32                       m_camera_handle;
 	    AndorCapabilities           m_camera_capabilities;
-	    string                      m_camera_error_str;
-	    int                         m_camera_error;
     
 	    struct Adc 
 	    {
@@ -281,8 +308,8 @@ namespace lima
     
 	    Adc*                        m_adc_speeds;
 	    int                         m_adc_speed_number;
-	    int                         m_adc_speed_max;
-	    int                         m_adc;
+	    int                         m_adc_speed_max_index;
+	    int                         m_adc_speed_index;
 	    int                         m_vss_number;
 	    float*                      m_vsspeeds;
 	    int                         m_vss_best;
@@ -304,12 +331,13 @@ namespace lima
 	    float                       m_exp_time_max;
 	    float                       m_kin_time;
 #if defined(WIN32)
-		long                        m_ring_buffer_size;  		
+	    long                        m_ring_buffer_size;  		
 #else
 	    int                         m_ring_buffer_size;                
 #endif
-	    map<int, string>            m_andor_type_maps;            
-	    map<int, string>            m_andor_error_maps;
+	    map<int, string>            m_andor_type_maps;
+	    map<int, string>            m_adcspeed_maps;
+	    map<int, string>            m_vsspeed_maps;
 	};
     } // namespace Andor
 } // namespace lima

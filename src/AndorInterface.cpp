@@ -1,7 +1,7 @@
 //###########################################################################
 // This file is part of LImA, a Library for Image Acquisition
 //
-// Copyright (C) : 2009-2012
+// Copyright (C) : 2009-2016
 // European Synchrotron Radiation Facility
 // BP 220, Grenoble 38043
 // FRANCE
@@ -354,6 +354,37 @@ void Interface::setHighCapacity(HighCapacityMode mode)
 }
 
 //-----------------------------------------------------
+// @brief	Gets the High capacity mode
+// @param	mode    mode to set
+//
+//-----------------------------------------------------
+void Interface::getHighCapacity(HighCapacityMode& mode)
+{
+    m_cam.getHighCapacity(mode);
+}
+
+//-----------------------------------------------------
+// @brief	Sets the FAN mode
+// @param	mode    mode to set
+//
+//-----------------------------------------------------
+void Interface::setFanMode(FanMode mode)
+{
+    m_cam.setFanMode(mode);
+}
+
+//-----------------------------------------------------
+// @brief	Gets the Fan mode
+// @param	mode    mode to set
+//
+//-----------------------------------------------------
+void Interface::getFanMode(FanMode& mode)
+{
+    m_cam.getFanMode(mode);
+}
+
+
+//-----------------------------------------------------
 // @brief	Sets the gate mode
 // @param	mode    mode to set
 //
@@ -361,6 +392,27 @@ void Interface::setHighCapacity(HighCapacityMode mode)
 void Interface::setGateMode(GateMode mode)
 {
     m_cam.setGateMode(mode);
+}
+
+//-----------------------------------------------------
+// @brief	get baseline clamp mode
+// @param	BLCLAMP_UNSUPPORTED, BLCLAMP_ON or BLCLAMP_OFF
+//
+//-----------------------------------------------------
+void Interface::getBaselineClamp(BaselineClamp& mode)
+{
+    m_cam.getBaselineClamp(mode);
+}
+
+
+//-----------------------------------------------------
+// @brief	set on  or off the baseline clamping
+// @param	BLCLAMP_OFF or BLCLAMP_ON    
+//
+//-----------------------------------------------------
+void Interface::setBaselineClamp(BaselineClamp mode)
+{
+    m_cam.setBaselineClamp(mode);
 }
 
 //-----------------------------------------------------

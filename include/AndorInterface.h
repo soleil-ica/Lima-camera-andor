@@ -1,7 +1,7 @@
 //###########################################################################
 // This file is part of LImA, a Library for Image Acquisition
 //
-// Copyright (C) : 2009-2012
+// Copyright (C) : 2009-2016
 // European Synchrotron Radiation Facility
 // BP 220, Grenoble 38043
 // FRANCE
@@ -61,12 +61,18 @@ namespace lima
 	    virtual int     getNbHwAcquiredFrames();
 
 	    // - From AndorCamera
-	    void setAdcSpeed(int adc);
-	    void getAdcSpeed(int& adc);
-	    void setVsSpeed(int vss);
-	    void getVsSpeed(int& vss);
-	    void setPGain(int gain);
-	    void getPGain(int& gain);
+	    void setAdcSpeed(int index);
+	    void getAdcSpeed(int& index);
+	    void getAdcSpeedMaxIndex(int& max_index){m_cam.getAdcSpeedMaxIndex(max_index);};
+	    void getAdcSpeedPaireString(int index, string& pgain){m_cam.getAdcSpeedPaireString(index, pgain);};
+	    void setVsSpeed(int index);
+	    void getVsSpeed(int& index);
+	    void getVsSpeedMaxIndex(int& max_index){m_cam.getVsSpeedMaxIndex(max_index);};
+	    void getVsSpeedString(int index, string& speed){m_cam.getVsSpeedString(index, speed);};
+	    void setPGain(int index);
+	    void getPGain(int& index);
+	    void getPGainMaxIndex(int& max_index) {m_cam.getPGainMaxIndex(max_index);};
+	    void getPGainString(int index, string& pgain){m_cam.getPGainString(index, pgain);};
 	    void setFastExtTrigger(bool flag);
 	    void getFastExtTrigger(bool& flag);
 	    void setShutterLevel(int level);
@@ -79,9 +85,14 @@ namespace lima
 	    void getCoolingStatus(std::string& status);    
 	    void setSpooling(bool flag, SpoolingMethod method, std::string path, int frameBufferSize);
 	    void setHighCapacity(HighCapacityMode mode);
+	    void getHighCapacity(HighCapacityMode& mode);
+	    void setFanMode(FanMode mode);
+	    void getFanMode(FanMode& mode);
 	    void setGateMode(GateMode mode);
-		//! get the camera object to access it directly from client
-		Camera& getCamera() { return m_cam;}
+	    //! get the camera object to access it directly from client
+	    Camera& getCamera() { return m_cam;}
+	    void setBaselineClamp(BaselineClamp mode);
+	    void getBaselineClamp(BaselineClamp& mode);
 
 	private:
 	    Camera&         m_cam;

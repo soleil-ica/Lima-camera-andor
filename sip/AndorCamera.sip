@@ -19,6 +19,7 @@ namespace Andor
 
     enum HighCapacityMode
     {
+        HC_UNSUPPORTED = -1,
         HIGH_SENSITIVITY = 0,
         HIGH_CAPACITY
     };
@@ -40,6 +41,20 @@ namespace Andor
         RANDOM_TRACK,
         SINGLE_TRACK,
         IMAGE
+    };
+
+    enum FanMode
+    {   FAN_UNSUPPORTED = -1,
+        FAN_ON_FULL = 0,
+        FAN_ON_LOW,
+        FAN_OFF
+    };
+
+    enum BaselineClamp
+    {
+         BLCLAMP_UNSUPPORTED = -1,
+	 BLCLAMP_DISABLED = 0,
+	 BLCLAMP_ENABLED = 1
     };
 
   class Camera
@@ -113,14 +128,21 @@ namespace Andor
 
     void initialiseController();
     void initAdcSpeed();
-    void setAdcSpeed(int adc);
-    void getAdcSpeed(int& adc /Out/);
+    void setAdcSpeed(int index);
+    void getAdcSpeed(int& index /Out/);
     void getAdcSpeedInMhz(float& adc /Out/);
+    void getAdcSpeedMaxIndex(int &max_index /Out/);
+    void getAdcSpeedPaireString(int index, std::string& paire /Out/);
     void initVsSpeed();
     void setVsSpeed(int vss);
     void getVsSpeed(int& vss /Out/);
+    void getVsSpeedMaxIndex(int& max_index /Out/);
+    void getVsSpeedString(int index, std::string& speed /Out/);
     void initPGain();
     void setPGain(int gain);
+    void getPGainMaxIndex(int& max_index /Out/);
+    void getPGainString(int index, std::string& pgain /Out/);
+
     void getPGain(int& gain /Out/);
     void setFastExtTrigger(bool flag);
     void getFastExtTrigger(bool& flag /Out/);
@@ -134,8 +156,14 @@ namespace Andor
     void getCoolingStatus(std::string& status /Out/);
     void setSpooling(bool flag, Andor::SpoolingMethod method, std::string path, int frameBufferSize);
     void setHighCapacity(Andor::HighCapacityMode mode);
+    void getHighCapacity(Andor::HighCapacityMode& mode /Out/);
     void setGateMode(Andor::GateMode mode);
+    void setFanMode(Andor::FanMode mode);
+    void getFanMode(Andor::FanMode& mode /Out/);
+
     //void setReadMode(Andor::ReadMode mode);
+    void setBaselineClamp(Andor::BaselineClamp mode);
+    void getBaselineClamp(Andor::BaselineClamp& mode /Out/);
     
   };
 
