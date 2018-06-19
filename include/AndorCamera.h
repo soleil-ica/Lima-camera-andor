@@ -77,8 +77,6 @@
 #include <ostream>
 #include <string>
 
-using namespace std;
-
 
 namespace lima
 {
@@ -226,17 +224,17 @@ namespace lima
 	    void getAdcSpeed(int& index);
 	    void getAdcSpeedInMhz(float& speed);
 	    void getAdcSpeedMaxIndex(int &max_index);
-	    void getAdcSpeedPaireString(int index, string& paire);
+	    void getAdcSpeedPaireString(int index, std::string& paire);
 	    void initVsSpeed();
 	    void setVsSpeed(int vss);
 	    void getVsSpeed(int& vss);
 	    void getVsSpeedMaxIndex(int& max_index);
-	    void getVsSpeedString(int index, string& speed);
+	    void getVsSpeedString(int index, std::string& speed);
 	    void initPGain();
 	    void setPGain(int gain);
 	    void getPGain(int& gain);
 	    void getPGainMaxIndex(int& max_index);
-	    void getPGainString(int index, string& pgain);
+	    void getPGainString(int index, std::string& pgain);
 	    void setFastExtTrigger(bool flag);
 	    void getFastExtTrigger(bool& flag);
 	    void setShutterLevel(int level);
@@ -286,15 +284,15 @@ namespace lima
 	    bool                        m_shutter_state;
         
 	    //- camera stuff 
-	    string                      m_detector_model;
-	    string                      m_detector_type;
+	    std::string                 m_detector_model;
+	    std::string                 m_detector_type;
 	    int                         m_detector_serial;
 	    FanMode                     m_fan_mode;
 	    HighCapacityMode            m_high_capacity;
 	    BaselineClamp               m_baseline_clamp;
     
 	    //- andor SDK stuff
-	    string                      m_config_path;
+	    std::string                 m_config_path;
 	    int                         m_camera_number;
 	    at_32                       m_camera_handle;
 	    AndorCapabilities           m_camera_capabilities;
@@ -326,7 +324,7 @@ namespace lima
 	    bool                        m_cooler;   
 	    int                         m_read_mode;
 	    int                         m_acq_mode;    
-	    map<TrigMode, int>          m_trig_mode_maps;
+	    std::map<TrigMode, int>     m_trig_mode_maps;
 	    float                       m_exp_time;
 	    float                       m_exp_time_max;
 	    float                       m_kin_time;
@@ -335,9 +333,9 @@ namespace lima
 #else
 	    int                         m_ring_buffer_size;                
 #endif
-	    map<int, string>            m_andor_type_maps;
-	    map<int, string>            m_adcspeed_maps;
-	    map<int, string>            m_vsspeed_maps;
+	    std::map<int, std::string>  m_andor_type_maps;
+	    std::map<int, std::string>  m_adcspeed_maps;
+	    std::map<int, std::string>  m_vsspeed_maps;
 	};
     } // namespace Andor
 } // namespace lima

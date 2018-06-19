@@ -30,7 +30,6 @@
 
 using namespace lima;
 using namespace lima::Andor;
-using namespace std;
 
 //---------------------------
 //- utility function
@@ -552,7 +551,7 @@ void Camera::setImageType(ImageType type)
 //-----------------------------------------------------
 // @brief return the detector type
 //-----------------------------------------------------
-void Camera::getDetectorType(string& type)
+void Camera::getDetectorType(std::string& type)
 {
     DEB_MEMBER_FUNCT();
     
@@ -562,10 +561,10 @@ void Camera::getDetectorType(string& type)
 //-----------------------------------------------------
 // @brief return the detector model
 //-----------------------------------------------------
-void Camera::getDetectorModel(string& type)
+void Camera::getDetectorModel(std::string& type)
 {
     DEB_MEMBER_FUNCT();
-    stringstream ss;
+    std::stringstream ss;
     ss << ", S/N. "<< m_detector_serial;
     type = m_detector_model + ss.str();
 }
@@ -1102,7 +1101,7 @@ void Camera::initAdcSpeed()
 	    if (m_adc_speeds[is].speed > speedMax) {
 		speedMax= m_adc_speeds[is].speed;
 		m_adc_speed_max_index= is;
-		stringstream ss;
+		std::stringstream ss;
 		ss << "ADC" << m_adc_speeds[is].adc << "_" << m_adc_speeds[is].speed << "MHZ";
 		m_adcspeed_maps[is] = ss.str();
 	    }
@@ -1173,7 +1172,7 @@ void Camera::getAdcSpeedMaxIndex(int& max_index)
 // @param	index
 //
 //-----------------------------------------------------
-void Camera::getAdcSpeedPaireString(int index,string& paire)
+void Camera::getAdcSpeedPaireString(int index, std::string& paire)
 {
   int is;
 
@@ -1185,7 +1184,7 @@ void Camera::getAdcSpeedPaireString(int index,string& paire)
   {
     is = index;
   }
-  stringstream ss;
+  std::stringstream ss;
   ss << "ADC" << m_adc_speeds[is].adc << "_" << m_adc_speeds[is].speed << "MHZ";
   paire = ss.str();
 }
@@ -1211,7 +1210,7 @@ void Camera::initVsSpeed()
     for (ivss=0; ivss<m_vss_number; ivss++)
     {
         THROW_IF_NOT_SUCCESS(GetVSSpeed(ivss, &m_vsspeeds[ivss]), "Cannot get VSS value");
-	stringstream ss;
+	std::stringstream ss;
 	ss << m_vsspeeds[ivss] << "USEC";
 	m_vsspeed_maps[ivss] = ss.str();
     }
@@ -1266,7 +1265,7 @@ void Camera::getVsSpeed(int& index)
 // @param	vss index
 //
 //-----------------------------------------------------
-void Camera::getVsSpeedString(int index, string& speed)
+void Camera::getVsSpeedString(int index, std::string& speed)
 {
   DEB_MEMBER_FUNCT();
   speed = m_vsspeed_maps[index];
@@ -1357,10 +1356,10 @@ void Camera::getPGainMaxIndex(int& max_index)
     max_index = m_gain_number;
 }
 
-void Camera::getPGainString(int index, string& pgain)
+void Camera::getPGainString(int index, std::string& pgain)
 {
     DEB_MEMBER_FUNCT();
-    stringstream ss;
+    std::stringstream ss;
     ss <<  "X" << m_preamp_gains[index];
     pgain = ss.str();
 }
@@ -1648,7 +1647,7 @@ void Camera::getCoolingStatus(std::string& status)
 // @param   framBufferSize  size of the internal circular buffer
 //
 //-----------------------------------------------------
-void Camera::setSpooling(bool flag, SpoolingMethod method, string path, int frameBufferSize)
+void Camera::setSpooling(bool flag, SpoolingMethod method, std::string path, int frameBufferSize)
 {
     DEB_MEMBER_FUNCT();
 
