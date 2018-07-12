@@ -64,15 +64,15 @@ namespace lima
 	    void setAdcSpeed(int index);
 	    void getAdcSpeed(int& index);
 	    void getAdcSpeedMaxIndex(int& max_index){m_cam.getAdcSpeedMaxIndex(max_index);};
-	    void getAdcSpeedPaireString(int index, string& pgain){m_cam.getAdcSpeedPaireString(index, pgain);};
+	    void getAdcSpeedPaireString(int index, std::string& pgain){m_cam.getAdcSpeedPaireString(index, pgain);};
 	    void setVsSpeed(int index);
 	    void getVsSpeed(int& index);
 	    void getVsSpeedMaxIndex(int& max_index){m_cam.getVsSpeedMaxIndex(max_index);};
-	    void getVsSpeedString(int index, string& speed){m_cam.getVsSpeedString(index, speed);};
+	    void getVsSpeedString(int index, std::string& speed){m_cam.getVsSpeedString(index, speed);};
 	    void setPGain(int index);
 	    void getPGain(int& index);
 	    void getPGainMaxIndex(int& max_index) {m_cam.getPGainMaxIndex(max_index);};
-	    void getPGainString(int index, string& pgain){m_cam.getPGainString(index, pgain);};
+	    void getPGainString(int index, std::string& pgain){m_cam.getPGainString(index, pgain);};
 	    void setFastExtTrigger(bool flag);
 	    void getFastExtTrigger(bool& flag);
 	    void setShutterLevel(int level);
