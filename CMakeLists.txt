@@ -21,57 +21,149 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program; if not, see <http://www.gnu.org/licenses/>.
 ############################################################################
-set(NAME "andor")
 
-set(${NAME}_srcs src/AndorCamera.cpp  src/AndorInterface.cpp
-	 src/AndorDetInfoCtrlObj.cpp src/AndorSyncCtrlObj.cpp
-	 src/AndorBinCtrlObj.cpp src/AndorShutterCtrlObj.cpp
-	 src/AndorRoiCtrlObj.cpp)
+cmake_minimum_required(VERSION 3.1)
 
-add_library(lima${NAME} SHARED ${${NAME}_srcs})
+project(simulator)
+include(cmake/project_version.cmake)
 
-#INCLUDES
-target_include_directories(lima${NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
-if(WIN32)
-	target_include_directories(lima${NAME} PUBLIC "C:/Program files/Andor SDK")
-	target_include_directories(lima${NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/sdk/msvc/include")
+set(NAME "andor") # This is used by LimaTools
+
+# Include additional modules that are used inconditionnaly
+include(GNUInstallDirs)
+include(GenerateExportHeader)
+
+# If conda build, always set lib dir to 'lib'
+if($ENV{CONDA_BUILD})
+  set(CMAKE_INSTALL_LIBDIR "lib")
 endif()
 
-
-if(WIN32)
-	target_compile_definitions(lima${NAME} PRIVATE LIBANDOR_EXPORTS)
+# Check if project is being used directly or via add_subdirectory
+set(CAMERA_MASTER_PROJECT OFF)
+if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+  set(CAMERA_MASTER_PROJECT ON)
 endif()
 
-#LIBRARY
-if(WIN32)
-	find_library(ANDOR_ATMCD64M_LIB atmcd64m "C:/Program files/Andor SDK")
-	if (("${ANDOR_ATMCD64M_LIB}" STREQUAL "ANDOR_ATMCD64M_LIB-NOTFOUND"))
-	  message(FATAL_ERROR "${NAME} : libatmcd32d not found, you can search it in cmake-gui or try to install it if it isn't here.")
-	endif()
-else()
-	find_library(ANDOR_LIB andor)
-	if (("${ANDOR_LIB}" STREQUAL "ANDOR_LIB-NOTFOUND"))
-	  message(FATAL_ERROR "${NAME} : libandor not found, you can search it in cmake-gui or try to install it if it isn't here.")
-	endif()
+# CMake additional macros
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
+
+if (CAMERA_MASTER_PROJECT)
+  find_package(Lima REQUIRED)
 endif()
 
-target_link_libraries(lima${NAME} limacore)
-if(WIN32)
-	target_link_libraries(lima${NAME} ${ANDOR_ATMCD64M_LIB})
-else()
-	target_link_libraries(lima${NAME} ${ANDOR_LIB})
+# Enable python binding code compilation using sip generator
+option(CAMERA_ENABLE_PYTHON "compile python binding code?" LIMA_ENABLE_PYTHON)
+
+if (CAMERA_ENABLE_PYTHON)
+  # Find python interpreter and libs
+  find_package(PythonInterp)
+  find_package(PythonLibs)
+  if(${PYTHONINTERP_FOUND})
+    # python site-packages folder
+    execute_process(
+      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print (get_python_lib())"
+      OUTPUT_VARIABLE _PYTHON_SITE_PACKAGES_DIR OUTPUT_STRIP_TRAILING_WHITESPACE)
+  endif()
+
+  set(PYTHON_SITE_PACKAGES_DIR ${_PYTHON_SITE_PACKAGES_DIR} CACHE PATH "where should python modules be installed?")
+
+  find_package(SIP REQUIRED)
+  include(SIPMacros)
+  if(WIN32)
+    set(SIP_TAGS WIN32_PLATFORM)
+  elseif(UNIX)
+    set(SIP_TAGS POSIX_PLATFORM)
+  endif(WIN32)
+  set(SIP_EXTRA_OPTIONS -e -g)
+
+  find_package(NumPy REQUIRED)
 endif()
 
-limatools_set_library_soversion(lima${NAME} "VERSION")
+find_package(Andor REQUIRED)
+
+file(GLOB_RECURSE ANDOR_INCS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
+
+add_library(andor SHARED
+  src/AndorCamera.cpp
+  src/AndorInterface.cpp
+  src/AndorDetInfoCtrlObj.cpp
+  src/AndorSyncCtrlObj.cpp
+  src/AndorBinCtrlObj.cpp
+  src/AndorShutterCtrlObj.cpp
+  src/AndorRoiCtrlObj.cpp
+  ${ANDOR_INCS}
+)
+
+# Generate export macros
+generate_export_header(andor)
+
+# Set version
+set_target_properties(andor PROPERTIES
+    VERSION "${VERSION}"
+    SOVERSION "${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}")
+
+# Add dependencies
+target_include_directories(simulator
+    PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+    PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>"           # For export header
+    PUBLIC "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
+)
+
+target_link_libraries(andor PUBLIC limacore)
+
+target_compile_definitions(andor PUBLIC ${ANDOR_DEFINITIONS})
+
+target_include_directories(andor PUBLIC ${ANDOR_INCLUDE_DIRS})
+
+target_link_libraries(andor PUBLIC ${ANDOR_LIBRARIES})
+
 if(WIN32)
-	set_target_properties(lima${NAME} PROPERTIES PREFIX "lib")
-	install(TARGETS lima${NAME} DESTINATION lib)
-else()
-	include(GNUInstallDirs)
-	install(TARGETS lima${NAME} LIBRARY DESTINATION  ${CMAKE_INSTALL_LIBDIR})
+  target_compile_definitions(andor
+    PRIVATE andor_EXPORTS
+    PUBLIC NOMINMAX)
+  set_target_properties(andor PROPERTIES PREFIX "lib" IMPORT_PREFIX "lib")
 endif()
 
-if(LIMA_ENABLE_PYTHON)
-	limatools_run_sip_for_camera(${NAME})
-    install(FILES python/__init__.py DESTINATION "${PYTHON_SITE_PACKAGES_DIR}/Lima/Andor")
+# Binding code for python
+if(CAMERA_ENABLE_PYTHON)
+  include(LimaTools)
+  limatools_run_sip_for_camera(andor)
+endif()
+
+# Generate and install package config file and version
+if(CAMERA_MASTER_PROJECT)
+    set (PROJECT_LIBRARIES andor)
+    include(cmake/package_config.cmake)
+endif()
+
+## Installation
+
+install(
+  TARGETS andor
+  EXPORT "${TARGETS_EXPORT_NAME}"
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}   # import library
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}   # .so files are libraries
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}   # .dll files are binaries
+  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}  # this does not actually install anything (but used by downstream projects)
+)
+
+install(
+  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+  COMPONENT devel
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  FILES_MATCHING PATTERN "*.h"
+)
+
+install(
+  FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}/project_version.h
+    ${PROJECT_BINARY_DIR}/andor_export.h
+  COMPONENT devel
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+## Tests
+if(CAMERA_ENABLE_TESTS)
+    enable_testing()
+    #add_subdirectory(test)
 endif()
