@@ -18,6 +18,13 @@ build-linux:
   tags:
     - linux
 
+build-win:
+  <<: *build-conda
+  script:
+    - conda build ./conda/camera --prefix-length=80 --output-folder=dist/ --channel=http://bcu-ci.esrf.fr/stable
+  tags:
+    - win
+
 build-noarch:
   <<: *build-conda
   stage: build-noarch
@@ -25,7 +32,8 @@ build-noarch:
     - conda build ./conda/tango --prefix-length=80 --output-folder=dist/ --channel=http://bcu-ci.esrf.fr/stable
   dependencies:
     - build-linux
-
+    - build-win
+    
 deploy-devel:
   stage: deploy
   environment:
@@ -33,6 +41,7 @@ deploy-devel:
     url: http://bcu-ci.esrf.fr/devel
   dependencies:
     - build-linux
+    - build-win
     - build-noarch
   script:
     - cp -Rf dist/* /conda-devel/
@@ -53,6 +62,7 @@ deploy-stable:
     url: http://bcu-ci.esrf.fr/stable
   dependencies:
     - build-linux
+    - build-win
     - build-noarch
   script:
     - cp -Rf dist/* /conda/
