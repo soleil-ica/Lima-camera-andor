@@ -22,7 +22,8 @@
 #ifndef ANDORDETINFOCTRLOBJ_H
 #define ANDORDETINFOCTRLOBJ_H
 
-#include "AndorCompatibility.h"
+#include <andor_export.h>
+
 #include "lima/HwDetInfoCtrlObj.h"
 #include "AndorCamera.h"
 
@@ -36,7 +37,7 @@ namespace lima
  * \brief Control object providing Andor detector info interface
  *******************************************************************/
 
-	class LIBANDOR_API DetInfoCtrlObj : public HwDetInfoCtrlObj
+	class ANDOR_EXPORT DetInfoCtrlObj : public HwDetInfoCtrlObj
 	{
 	    DEB_CLASS_NAMESPC(DebModCamera, "DetInfoCtrlObj", "Andor");
 

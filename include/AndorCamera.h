@@ -22,13 +22,12 @@
 #ifndef ANDORCAMERA_H
 #define ANDORCAMERA_H
 
-#include "AndorCompatibility.h"
-
 #if defined (__GNUC__) && (__GNUC__ == 3) && defined (__ELF__)
 #   define GENAPI_DECL __attribute__((visibility("default")))
 #   define GENAPI_DECL_ABSTRACT __attribute__((visibility("default")))
 #endif
 
+#include <andor_export.h>
 
 #if defined(WIN32)
 
@@ -141,7 +140,7 @@ namespace lima
  * \class Camera
  * \brief object controlling the andor camera via Pylon driver
  *******************************************************************/
-	class LIBANDOR_API Camera
+	class ANDOR_EXPORT Camera
 	{
 	    DEB_CLASS_NAMESPC(DebModCamera, "Camera", "Andor");
 	    friend class Interface;

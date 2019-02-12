@@ -22,7 +22,8 @@
 #ifndef ANDORBINCTRLOBJ_H
 #define ANDORBINCTRLOBJ_H
 
-#include "AndorCompatibility.h"
+#include <andor_export.h>
+
 #include "lima/HwBinCtrlObj.h"
 #include "AndorCamera.h"
 
@@ -35,7 +36,7 @@ namespace lima
  * \class BinCtrlObj
  * \brief Control object providing Andor Bin interface
  *******************************************************************/
-	class LIBANDOR_API BinCtrlObj : public HwBinCtrlObj
+	class ANDOR_EXPORT BinCtrlObj : public HwBinCtrlObj
 	{
 	    DEB_CLASS_NAMESPC(DebModCamera, "BinCtrlObj", "Andor");
 	  public:
