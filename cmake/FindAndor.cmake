@@ -4,8 +4,8 @@ set(ANDOR_DEFINITIONS)
 
 if(WIN32)
   # Missing find_path here
-  find_library(ANDOR_LIBRARIES atmcd64m "c:/program files/andor sdk")
-  find_path(ANDOR_INCLUDE_DIRS "atmcd32d.h" "c:/program files/andor sdk")
+  find_library(ANDOR_LIBRARIES atmcd64m)
+  find_path(ANDOR_INCLUDE_DIRS "atmcd32d.h")
 else()
   find_path(ANDOR_INCLUDE_DIRS "atmcdLXd.h")
   find_library(ANDOR_LIBRARIES andor)
