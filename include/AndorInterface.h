@@ -22,7 +22,8 @@
 #ifndef ANDORINTERFACE_H
 #define ANDORINTERFACE_H
 
-#include "AndorCompatibility.h"
+#include <andor_export.h>
+
 #include "lima/HwInterface.h"
 #include "AndorCamera.h"
 #include "AndorDetInfoCtrlObj.h"
@@ -43,7 +44,7 @@ namespace lima
  * \brief Andor hardware interface
  *******************************************************************/
 
-	class LIBANDOR_API Interface : public HwInterface
+	class ANDOR_EXPORT Interface : public HwInterface
 	{
 	    DEB_CLASS_NAMESPC(DebModCamera, "AndorInterface", "Andor");
 

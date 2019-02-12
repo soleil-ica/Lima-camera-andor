@@ -22,7 +22,8 @@
 #ifndef ANDORROICTRLOBJ_H
 #define ANDORROICTRLOBJ_H
 
-#include "AndorCompatibility.h"
+#include <andor_export.h>
+
 #include "lima/HwRoiCtrlObj.h"
 #include "AndorCamera.h"
 
@@ -37,7 +38,7 @@ namespace lima
  * \brief Control object providing Andor Roi interface
  *******************************************************************/
 
-	class LIBANDOR_API RoiCtrlObj : public HwRoiCtrlObj
+	class ANDOR_EXPORT RoiCtrlObj : public HwRoiCtrlObj
 	{
 	    DEB_CLASS_NAMESPC(DebModCamera, "RoiCtrlObj", "Andor");
 
