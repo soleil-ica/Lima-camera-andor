@@ -16,7 +16,7 @@ requirements:
     - numpy
     - sip 4.19.8              # For compatibility with pyqt 5.9.2
     - lima-core
-    - andor2-sdk
+    - andor2-sdk >=2.103.30022
   build:
     - git
     - cmake
@@ -25,7 +25,7 @@ requirements:
     - python {{ python }}
     - sip >=4.19.4, <=4.19.8  # For compatibility with pyqt 5.9.2
     - {{ pin_compatible('lima-core', max_pin='x.x') }}
-    - andor2-sdk
+    - andor2-sdk >=2.103.30022
 
 test:
   requires:

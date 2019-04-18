@@ -163,17 +163,17 @@ class Andor(PyTango.Device_4Impl):
             _AndorInterface.setShutterLevel(self.__ShutterLevel[self.shutter_level])
 
 
-        if self.__FanMode.has_key('UNSUPPORTED') and self.fan_mode:
+        if 'UNSUPPORTED' in self.__FanMode.keys() and self.fan_mode:
             deb.Error('Cannot set fan_mode property, not supported for this camera model')
         elif self.fan_mode:
                 _AndorInterface.setFanMode(self.__FanMode[self.fan_mode])
 
-        if self.__HighCapacity.has_key('UNSUPPORTED') and self.high_capacity:
+        if 'UNSUPPORTED' in self.__HighCapacity.keys() and self.high_capacity:
             deb.Error('Cannot set high_capacity property, not supported for this camera model')
         elif self.high_capacity:
                 _AndorInterface.setHighCapacity(self.__HighCapacity[self.high_capacity])
 
-        if self.__BaselineClamp.has_key('UNSUPPORTED') and self.baseline_clamp:
+        if 'UNSUPPORTED' in self.__BaselineClamp.keys() and self.baseline_clamp:
             deb.Error('Cannot set baseline_clamp propery, not supported for this camera model')
         elif self.baseline_clamp:
             _AndorInterface.setBaselineClamp(self.__BaselineClamp[self.baseline_clamp])
