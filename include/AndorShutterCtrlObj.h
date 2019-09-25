@@ -22,7 +22,8 @@
 #ifndef ANDORSHUTTERCTRLOBJ_H
 #define ANDORSHUTTERCTRLOBJ_H
 
-#include "AndorCompatibility.h"
+#include <andor_export.h>
+
 #include "lima/HwShutterCtrlObj.h"
 #include "AndorCamera.h"
 
@@ -36,7 +37,7 @@ namespace lima
  * \brief Control object providing Andor shutter interface
  *******************************************************************/
 
-	class LIBANDOR_API ShutterCtrlObj : public HwShutterCtrlObj
+	class ANDOR_EXPORT ShutterCtrlObj : public HwShutterCtrlObj
 	{
 	    DEB_CLASS_NAMESPC(DebModCamera, "ShutterCtrlObj", "Andor");
 

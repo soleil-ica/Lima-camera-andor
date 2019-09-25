@@ -165,6 +165,8 @@ namespace Andor
     void setBaselineClamp(Andor::BaselineClamp mode);
     void getBaselineClamp(Andor::BaselineClamp& mode /Out/);
     
+  private:
+    Camera(const Andor::Camera&);
   };
 
 };
